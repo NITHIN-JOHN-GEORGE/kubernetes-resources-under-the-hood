@@ -5,9 +5,10 @@ SHELL := /usr/bin/env bash
 CLUSTER ?= under-the-hood
 export CLUSTER
 
-MODULES := 00-setup 01-requests-and-limits 02-cpu-throttling 03-cpu-weight 04-memory-and-oom 05-qos-classes
+# Every folder under modules/ is a module, in numeric order.
+MODULES := $(sort $(notdir $(wildcard modules/*)))
 
-.PHONY: help prereqs cluster delete-cluster all check-all clean $(MODULES)
+.PHONY: help prereqs cluster delete-cluster all check-all clean reset restore-kubelet $(MODULES)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-26s\033[0m %s\n", $$1, $$2}'
@@ -34,5 +35,20 @@ all: $(MODULES) ## Run every module in order
 check-all: ## Run every module and fail on the first failed check (used by CI)
 	@set -e; for m in $(MODULES); do ./modules/$$m/run.sh; done
 
-clean: ## Delete the lab namespace and everything in it
-	@kubectl delete ns lab --ignore-not-found
+clean: ## Delete the whole kind cluster and everything in it (start again with make cluster)
+	@if kind get clusters 2>/dev/null | grep -qx "$(CLUSTER)"; then \
+		kind delete cluster --name $(CLUSTER); \
+	else \
+		echo "No kind cluster named $(CLUSTER), nothing to delete."; \
+	fi
+
+reset: ## Keep the cluster, but remove everything the lab created and undo any kubelet change
+	@echo "Restoring the worker's kubelet config if a module left it changed..."
+	@docker exec $(CLUSTER)-worker sh -c 'if [ -f /var/lib/kubelet/config.yaml.lab-backup ]; then mv /var/lib/kubelet/config.yaml.lab-backup /var/lib/kubelet/config.yaml && systemctl restart kubelet && echo "  restored"; else echo "  nothing to restore"; fi'
+	@echo "Deleting lab namespaces and priority classes..."
+	@kubectl delete ns lab lab-quota lab-limits --ignore-not-found --wait=true
+	@kubectl delete priorityclass lab-low lab-high --ignore-not-found
+	@kubectl wait --for=condition=Ready node --all --timeout=180s >/dev/null && echo "Cluster is clean."
+
+restore-kubelet: ## Only put back the worker's original kubelet config
+	@docker exec $(CLUSTER)-worker sh -c 'if [ -f /var/lib/kubelet/config.yaml.lab-backup ]; then mv /var/lib/kubelet/config.yaml.lab-backup /var/lib/kubelet/config.yaml && systemctl restart kubelet && echo restored; else echo "nothing to restore"; fi'

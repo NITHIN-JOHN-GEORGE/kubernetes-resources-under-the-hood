@@ -38,14 +38,14 @@ Every module cleans up its own pods when it finishes, even if a check fails or y
 | 03 | [CPU weight under contention](modules/03-cpu-weight) | CPU split in proportion to requests |
 | 04 | [Memory limits and OOM kills](modules/04-memory-and-oom) | `OOMKilled`, exit code 137 and `oom_kill` in `memory.events` |
 | 05 | [QoS classes](modules/05-qos-classes) | Guaranteed / Burstable / BestEffort slices and `oom_score_adj` |
-| 06 | Node allocatable and reservations | *coming next* |
-| 07 | Node-pressure eviction | *coming next* |
-| 08 | Priority classes and preemption | *coming next* |
-| 09 | ResourceQuota | *coming next* |
-| 10 | LimitRange | *coming next* |
-| 11 | PIDs and ephemeral storage | *coming next* |
-| 12 | Pressure stall information (PSI) | *coming next* |
-| 13 | In-place pod resize | *coming next* |
+| 06 | [Node allocatable and reservations](modules/06-node-allocatable) | Capacity vs allocatable, the pod tree's `memory.max`, `Insufficient memory` |
+| 07 | [Node-pressure eviction](modules/07-node-pressure-eviction) | Kubelet evicts a BestEffort hog under `MemoryPressure` (changes kubelet config, restored on exit) |
+| 08 | [Priority classes and preemption](modules/08-priority-preemption) | A high-priority pod preempts a low-priority one |
+| 09 | [ResourceQuota](modules/09-resourcequota) | `must specify` and `exceeded quota` at admission |
+| 10 | [LimitRange](modules/10-limitrange) | Injected defaults land in `cpu.max` and `memory.max`; over-max pods rejected |
+| 11 | [PIDs and ephemeral storage](modules/11-pids-and-ephemeral-storage) | `pids.max`, refused forks, and eviction for local disk use |
+| 12 | [Pressure stall information (PSI)](modules/12-psi) | `cpu.pressure`, `memory.pressure`, `io.pressure` |
+| 13 | [In-place pod resize](modules/13-in-place-resize) | `cpu.max` and `memory.max` change with no restart (1.33+) |
 
 Each module has a README with the concept, the expected output and what happens in the kernel, plus automatic checks that print `PASS` or `FAIL`.
 
@@ -101,8 +101,8 @@ make help                 # list everything
 make <module>             # run one module, e.g. make 04-memory-and-oom
 make all                  # run every module in order
 KEEP=1 make <module>      # keep the module's pods running so you can explore
-make clean                # delete the lab namespace
-make delete-cluster       # remove the cluster
+make reset                # keep the cluster, remove everything the lab created, undo any kubelet change
+make clean                # delete the whole kind cluster (make cluster to start again)
 ```
 
 ## How it reads kernel files
@@ -112,6 +112,7 @@ make delete-cluster       # remove the cluster
 
 ## Further reading
 
+- Handbook: [Kubernetes resources, under the hood](https://nithin-john-george.github.io/handbooks/kubernetes-resources-under-the-hood/), every module written up as a chapter
 - Blog: [Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)
 - [Kubernetes docs: Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 - [Linux kernel docs: Control Group v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)

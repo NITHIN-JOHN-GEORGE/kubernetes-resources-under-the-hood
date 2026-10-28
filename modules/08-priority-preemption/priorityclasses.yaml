@@ -1,0 +1,17 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lab-low
+  labels: {module: "08"}
+value: 1000
+globalDefault: false
+description: "Lab: low priority, can be preempted."
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lab-high
+  labels: {module: "08"}
+value: 1000000
+globalDefault: false
+description: "Lab: high priority, preempts lab-low."

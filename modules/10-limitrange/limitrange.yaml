@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-limits
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: container-defaults
+  namespace: lab-limits
+spec:
+  limits:
+    - type: Container
+      defaultRequest: {cpu: 100m, memory: 64Mi}   # used when a container sets no request
+      default:        {cpu: 200m, memory: 128Mi}  # used when a container sets no limit
+      max:            {memory: 256Mi}
+      min:            {memory: 32Mi}

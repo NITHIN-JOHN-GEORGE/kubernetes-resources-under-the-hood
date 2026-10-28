@@ -67,10 +67,82 @@ cleanup_on_exit() {
 }
 _cleanup() {
   local rc=$?
+  # Modules can define module_cleanup for extra work (restore kubelet config, delete a namespace).
+  if declare -F module_cleanup >/dev/null; then module_cleanup || true; fi
   if [ "${KEEP:-0}" != "1" ] && [ -n "${CLEAN_SELECTOR:-}" ]; then
     kubectl -n "$NS" delete pod -l "$CLEAN_SELECTOR" --ignore-not-found --wait=false >/dev/null 2>&1 || true
     note ""
     note "Cleaned up the module's pods. Run with KEEP=1 to keep them."
   fi
   exit "$rc"
+}
+
+# ---------------------------------------------------------------------------
+# Kubelet config changes on the worker node (modules 07 and 11).
+# The original config is backed up once and always restored by kubelet_restore.
+# ---------------------------------------------------------------------------
+KUBELET_CFG=/var/lib/kubelet/config.yaml
+
+wait_node_ready() {
+  sleep 5
+  kubectl wait --for=condition=Ready "node/$WORKER" --timeout=180s >/dev/null
+}
+
+kubelet_backup() {
+  on_node "[ -f $KUBELET_CFG.lab-backup ] || cp $KUBELET_CFG $KUBELET_CFG.lab-backup"
+}
+
+kubelet_restart() {
+  on_node "systemctl restart kubelet"
+  wait_node_ready
+}
+
+# Set a top-level scalar, e.g. kubelet_set podPidsLimit 64
+kubelet_set() {
+  on_node "if grep -q '^$1:' $KUBELET_CFG; then sed -i 's|^$1:.*|$1: $2|' $KUBELET_CFG; else echo '$1: $2' >> $KUBELET_CFG; fi"
+}
+
+# Replace the whole evictionHard map. Pass entries as key=value, e.g. memory.available=500Mi
+kubelet_set_eviction_hard() {
+  local add="echo 'evictionHard:' >> $KUBELET_CFG;"
+  for kv in "$@"; do add="$add echo '  ${kv%%=*}: \"${kv#*=}\"' >> $KUBELET_CFG;"; done
+  on_node "awk 'BEGIN{skip=0} /^evictionHard:/{skip=1; next} skip && /^[[:space:]]/{next} {skip=0; print}' $KUBELET_CFG > $KUBELET_CFG.tmp && mv $KUBELET_CFG.tmp $KUBELET_CFG && $add"
+}
+
+kubelet_restore() {
+  if on_node "[ -f $KUBELET_CFG.lab-backup ]"; then
+    on_node "mv $KUBELET_CFG.lab-backup $KUBELET_CFG"
+    kubelet_restart
+    note "Restored the worker's original kubelet config."
+  fi
+}
+
+# Print a kubelet config value as the running kubelet sees it (from configz).
+kubelet_live() {
+  local raw; raw="$(kubectl get --raw "/api/v1/nodes/$WORKER/proxy/configz")"
+  printf '%s' "$raw" | grep -o "\"$1\":{[^}]*}" | head -n1 && return 0
+  printf '%s' "$raw" | grep -o "\"$1\":[^,}]*" | head -n1
+}
+
+# Wait until the lab namespace has no pods left (so earlier modules don't skew scheduling).
+wait_lab_empty() {
+  kubectl -n "$NS" wait --for=delete pod --all --timeout=90s >/dev/null 2>&1 || true
+}
+
+# Sum of CPU requests (millicores) of non-terminated pods on the worker.
+worker_cpu_requested() {
+  kubectl get pods -A --field-selector "spec.nodeName=$WORKER,status.phase!=Succeeded,status.phase!=Failed" \
+    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.resources.requests.cpu}{"\n"}{end}{end}' |
+    awk '/m$/ {sub(/m$/,""); s+=$1; next} /^[0-9.]+$/ {s+=$1*1000} END {print int(s)}'
+}
+
+# Allocatable CPU of the worker in millicores.
+worker_cpu_allocatable() {
+  kubectl get node "$WORKER" -o jsonpath='{.status.allocatable.cpu}' |
+    awk '/m$/ {sub(/m$/,""); print int($1); next} {print int($1*1000)}'
+}
+
+# Kubernetes server minor version, e.g. 33
+server_minor() {
+  kubectl version -o yaml 2>/dev/null | awk '/serverVersion:/{f=1} f && /minor:/ {gsub(/[^0-9]/,"",$2); print $2; exit}'
 }
