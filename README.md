@@ -112,8 +112,7 @@ make clean                # delete the whole kind cluster (make cluster to start
 
 ## Further reading
 
-- Handbook: [Kubernetes resources, under the hood](https://nithin-john-george.github.io/handbooks/kubernetes-resources-under-the-hood/), every module written up as a chapter
-- Blog: [Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)
+- Blog: [Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/), the beginner-friendly walkthrough of every module, with diagrams
 - [Kubernetes docs: Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 - [Linux kernel docs: Control Group v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
 
