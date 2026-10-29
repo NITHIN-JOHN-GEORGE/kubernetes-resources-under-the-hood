@@ -47,7 +47,7 @@ PASS cpu-unlimited was never throttled
 ```
 
 > [!TIP]
-> Every module cleans up its own pods, even if a check fails or you press Ctrl-C. Run with `KEEP=1` to keep them and poke around.
+> Learn by following a module's README step by step; use `make` to check your results or rerun quickly. Every module cleans up its own pods, even if a check fails or you press Ctrl-C. Run with `KEEP=1` to keep them and poke around.
 
 ## Modules
 
@@ -104,7 +104,7 @@ PASS cpu-unlimited was never throttled
 
 <sub>¹ Temporarily changes the worker's kubelet config and always restores it on exit.</sub>
 
-Each module folder has a README with the concept, real example output, and what happens in the kernel.
+**Each module folder has a hands-on README.** You type the commands yourself, one step at a time, and each step shows what you should see and explains it in plain English, including the Linux files involved (`cpu.max`, `memory.max`, `cpu.stat`, `memory.events`, `/proc/<pid>/oom_score_adj` and more). The `make` target runs the same steps in one go and checks the results.
 
 ## Setup
 

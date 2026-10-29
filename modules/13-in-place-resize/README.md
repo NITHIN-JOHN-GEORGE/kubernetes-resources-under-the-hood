@@ -1,59 +1,73 @@
 # 13 · In-place pod resize
 
-**Goal:** change a running pod's CPU and memory without restarting it, and watch the cgroup files change underneath.
+**What you'll learn:** how to change a running pod's CPU and memory without restarting it, and proof that it really is just rewriting the cgroup files.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`, Kubernetes 1.33 or newer, and kubectl 1.32 or newer. Run every command from the repo folder.
+
+---
+
+## Step 1: Start a pod
 
 ```bash
-make 13-in-place-resize
+kubectl create namespace lab            # skip if it already exists
+kubectl -n lab apply -f modules/13-in-place-resize/pod.yaml
+kubectl -n lab wait --for=condition=Ready pod/resize-demo
 ```
 
-Needs Kubernetes 1.33 or newer (the feature is on by default from 1.33) and kubectl 1.32 or newer. On older clusters the module prints `SKIP`.
+`resize-demo` asks for 200m CPU and 64Mi memory, with limits equal to requests.
 
-`resize-demo` starts as a Guaranteed pod with `200m`/`64Mi`. The module resizes it to `500m`/`128Mi`:
+## Step 2: Note its files and identity
+
+```bash
+kubectl -n lab exec resize-demo -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+kubectl -n lab get pod resize-demo -o jsonpath='{.status.containerStatuses[0].containerID}{"\n"}'
+```
+
+```output
+20000 100000
+67108864
+containerd://3f9c…
+```
+
+`20000 100000` is 200m (20 ms per 100 ms), `67108864` is 64 MiB. Keep the container ID; it's the container's unique identity. A restarted container gets a new one.
+
+## Step 3: Resize it
 
 ```bash
 kubectl -n lab patch pod resize-demo --subresource resize --patch \
   '{"spec":{"containers":[{"name":"main","resources":{"requests":{"cpu":"500m","memory":"128Mi"},"limits":{"cpu":"500m","memory":"128Mi"}}}]}}'
 ```
 
-## Example output
+**What `--subresource resize` means:** a pod's resources used to be fixed once it was created. Since 1.33, Kubernetes has a separate "resize" door for changing them, which access rules can allow on its own.
 
-From a real run on kind (Kubernetes 1.37):
+## Step 4: Check the files again
 
-```text
-$ cgroup files before (200m / 64Mi)
-  container  cpu.max 20000 100000   memory.max 67108864   cpu.weight 29
-  pod        cpu.max 20000 100000   memory.max 67108864
-$ kubectl -n lab patch pod resize-demo --subresource resize --patch '...'
-  pod/resize-demo patched
-$ cgroup files after (500m / 128Mi)
-  container  cpu.max 50000 100000   memory.max 134217728  cpu.weight 59
-  pod        cpu.max 50000 100000   memory.max 134217728
-
-  spec    limits {"cpu":"500m","memory":"128Mi"}
-  status  limits {"cpu":"500m","memory":"128Mi"}
-  restartCount 0
+```bash
+kubectl -n lab exec resize-demo -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+kubectl -n lab get pod resize-demo -o jsonpath='{.status.containerStatuses[0].containerID}  restarts={.status.containerStatuses[0].restartCount}{"\n"}'
 ```
 
-## What you should see
+```output
+50000 100000
+134217728
+containerd://3f9c…  restarts=0
+```
 
-| File | Before | After |
-|---|---|---|
-| `cpu.max` | `20000 100000` | `50000 100000` |
-| `memory.max` | `67108864` | `134217728` |
-| `cpu.weight` | lower | higher (the request went up too) |
+**What it means:** the limits are now 500m and 128 MiB, the container ID is the same, and the restart count is still 0. The kubelet asked the container runtime to rewrite the files of the running container. The process inside never noticed.
 
-- `restartCount` stays `0` and the container ID doesn't change.
-- `.spec` shows what you asked for; `.status.containerStatuses[].resources` shows what the kubelet has applied.
+## Things worth knowing
 
-## Internals
+- `.spec` shows what you asked for; `.status.containerStatuses[0].resources` shows what's actually been applied. While they differ, the pod has a `PodResizeInProgress` condition.
+- If the node doesn't have room, the resize waits with a `PodResizePending` condition.
+- The QoS class can't change during a resize, which is why this example raises requests and limits together.
+- `resizePolicy` can ask for a restart instead, for apps that only read their memory size at startup, such as a JVM with a fixed heap.
 
-- **A separate subresource.** Resizes go through `pods/resize`, so RBAC can allow resizing without allowing other pod edits. Before 1.33, the pod's resources were immutable.
-- **The kubelet does the work.** It checks the new values fit the node's allocatable, then calls the runtime's `UpdateContainerResources`, which rewrites `cpu.max`, `cpu.weight` and `memory.max` of the running container and the pod slice.
-- **If it doesn't fit,** the pod gets a `PodResizePending` condition (reason `Deferred` or `Infeasible`) and keeps its old resources. While the change is being applied, there's a `PodResizeInProgress` condition.
-- **`resizePolicy`** decides per resource whether a change needs a container restart. `NotRequired` (the default) updates the cgroup live. `RestartContainer` suits apps that read their memory size only at startup, such as a JVM with a fixed heap.
-- **QoS class can't change.** A Guaranteed pod must stay Guaranteed, which is why this demo raises requests and limits together.
-- **Shrinking memory is careful.** The kubelet won't lower `memory.max` below current usage, so a decrease can stay in progress until the app frees memory.
+## Clean up
 
-## Takeaway
+```bash
+kubectl -n lab delete pod resize-demo
+```
 
-Vertical scaling no longer means a restart. This is what lets the Vertical Pod Autoscaler's `InPlaceOrRecreate` mode adjust pods without evicting them.
+## Shortcut
+
+`make 13-in-place-resize` runs all of this and checks the new values, the restart count and the container ID.

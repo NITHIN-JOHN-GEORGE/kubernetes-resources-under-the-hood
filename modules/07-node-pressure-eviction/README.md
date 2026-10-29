@@ -1,67 +1,103 @@
 # 07 · Node-pressure eviction
 
-**Goal:** watch the kubelet evict a pod because the *node* is low on memory, before the kernel OOM killer gets involved.
+**What you'll learn:** what the kubelet does when a *node* (not one container) runs low on memory, and how it picks which pod to remove.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`. Run every command from the repo folder.
+
+> [!WARNING]
+> This module needs a node that's actually short on memory, which your laptop isn't. So it **temporarily changes the worker's kubelet config** to make "low memory" kick in much sooner. Use the `make` command below for that part; it always puts the original config back, even if you press Ctrl-C. You'll do the looking around by hand.
+
+---
+
+## Step 1: Look at the node's memory health
 
 ```bash
-make 07-node-pressure-eviction
+kubectl get node under-the-hood-worker -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}'
 ```
 
-> **This module changes the worker's kubelet config.** It backs up `/var/lib/kubelet/config.yaml`, raises the `memory.available` eviction threshold so the node is about 600Mi away from pressure, and restarts the kubelet. The original config is restored on exit, including on failure or Ctrl-C.
+```output
+MemoryPressure=False
+DiskPressure=False
+PIDPressure=False
+Ready=True
+```
 
-Three pods run on the worker:
+**What it means:** the kubelet constantly reports how the node is doing. `MemoryPressure=True` means free memory has dropped below the eviction threshold, and the kubelet has started removing pods.
 
-| Pod | QoS | Memory |
-|---|---|---|
-| `memory-hog` | BestEffort | Grows to 1000 MiB, no requests |
-| `calm-burstable` | Burstable | Requests 32Mi, uses a few |
-| `calm-guaranteed` | Guaranteed | 32Mi request and limit |
+## Step 2: Understand how the kubelet measures "free"
 
-## Example output
-
-From a real run on kind:
+Every 10 seconds or so, the kubelet works out:
 
 ```text
-  7741Mi  (MemTotal minus the node cgroup's working set)
-  "evictionHard":{"imagefs.available":"0%","memory.available":"7141Mi",...}
-
-  status=True  reason=KubeletHasInsufficientMemory
-
-  NAME              READY   STATUS    RESTARTS   AGE
-  calm-burstable    1/1     Running   0          17s
-  calm-guaranteed   1/1     Running   0          17s
-  memory-hog        0/1     Error     0          17s
-
-  The node was low on resource: memory. Threshold quantity: 7141Mi, available: 7191604Ki.
-  Container main was using 721996Ki, request is 0, has larger consumption of memory.
+memory.available = node capacity - working set
+working set      = memory in use - memory the kernel could easily drop (inactive file cache)
 ```
 
-The hog was evicted at about 700 MiB, once available memory fell to within roughly 50Mi of the threshold. Note `request is 0`: that's why it ranked first.
+If `memory.available` drops below `evictionHard` (by default 100Mi on most clusters), it picks a pod and evicts it.
 
-## What you should see
+## Step 3: Run the experiment
 
-- The worker's `MemoryPressure` condition turns `True`. A few seconds later the control plane adds a `node.kubernetes.io/memory-pressure:NoSchedule` taint, so it may not appear in the output yet.
-- `memory-hog` ends in `Failed` with reason `Evicted` and a message like `The node was low on resource: memory. Threshold quantity: ..., available: ...`.
-- Both calm pods keep running.
+```bash
+KEEP=1 make 07-node-pressure-eviction
+```
 
-If the hog isn't evicted on your machine, run with a smaller margin: `MARGIN_MI=400 make 07-node-pressure-eviction`.
+`KEEP=1` leaves the pods in place afterwards so you can inspect them. While it runs, the module:
 
-## Two different things kill pods for memory
+1. Works out how much memory the worker has available.
+2. Edits `/var/lib/kubelet/config.yaml` on the node so `evictionHard: memory.available` is only about 600 MiB below that, then restarts the kubelet with `systemctl restart kubelet`.
+3. Starts three pods:
+   - `memory-hog`: BestEffort (no requests), grows to 1000 MiB.
+   - `calm-burstable`: requests 32Mi, uses almost nothing.
+   - `calm-guaranteed`: 32Mi request and limit, uses almost nothing.
+4. Waits for the kubelet to react, then restores the original config.
 
-| | Container limit (module 04) | Node pressure (this module) |
+## Step 4: See who got evicted
+
+```bash
+kubectl -n lab get pods -l module=07
+```
+
+```output
+NAME              READY   STATUS    RESTARTS   AGE
+calm-burstable    1/1     Running   0          17s
+calm-guaranteed   1/1     Running   0          17s
+memory-hog        0/1     Error     0          17s
+```
+
+```bash
+kubectl -n lab get pod memory-hog -o jsonpath='{.status.reason}: {.status.message}{"\n"}'
+```
+
+```output
+Evicted: The node was low on resource: memory. Threshold quantity: 7141Mi, available: 7191604Ki.
+Container main was using 721996Ki, request is 0, has larger consumption of memory.
+```
+
+**What it means:** the kubelet ranks pods by how far they are *above their memory request*. The hog had a request of 0 and was using about 700 MiB, so it was first in line. The calm pods were using less than they asked for, so they were safe.
+
+## Eviction vs OOM kill
+
+| | OOM kill (module 04) | Eviction (this module) |
 |---|---|---|
-| Who acts | The kernel, inside one cgroup | The kubelet |
-| Trigger | Container hits `memory.max` | Node `memory.available` drops below `evictionHard` |
-| Result | `OOMKilled`, container restarts | Pod `Evicted`, phase `Failed`, not restarted on that node |
-| Victim | The process that exceeded its limit | Ranked across all pods on the node |
+| Who does it | The kernel | The kubelet |
+| Trigger | One container hits its own `memory.max` | The whole node gets low on memory |
+| What you see | `OOMKilled`, exit code 137, container restarts | `Evicted`, pod becomes `Failed` and is not restarted on this node |
+| Who is chosen | The process that went over its limit | The pod furthest above its memory request |
 
-## Internals
+A container using more than its request but less than its limit is fine as far as the kernel is concerned. It only becomes a target when the node runs short.
 
-- **How `memory.available` is measured:** node capacity minus the *working set* of the node's root cgroup, where working set is `memory.current - inactive_file`. Page cache that can be dropped easily doesn't count. The kubelet checks every 10 seconds by default.
-- **Who goes first:** pods whose usage is above their requests, then by priority (module 08), then by how far above requests they are. BestEffort pods have zero requests, so any usage is "above requests".
-- **Hard vs soft thresholds:** `evictionHard` acts immediately with no grace period. `evictionSoft` waits for `evictionSoftGracePeriod` and honours the pod's termination grace period.
-- **`evictionPressureTransitionPeriod`** (default 5m, set to 10s here) is how long the condition stays `True` after usage recovers. It stops the node from flapping in and out of pressure.
-- **The kernel is the last resort.** If memory runs out faster than the kubelet's 10-second loop, the kernel's global OOM killer acts first and uses `oom_score_adj` from module 05.
+## Clean up
 
-## Takeaway
+```bash
+kubectl -n lab delete pod -l module=07
+```
 
-Requests are what protect a pod during node pressure. A pod that stays within its memory request is near the bottom of the eviction list.
+## Summary
+
+- The kubelet watches `memory.available` and evicts pods when it falls below `evictionHard`.
+- Pods using less than their memory request are evicted last. BestEffort pods, with a request of 0, go first.
+- Evicted pods are not restarted on the same node. A Deployment creates a replacement, possibly on another node.
+
+## Shortcut
+
+`make 07-node-pressure-eviction` (without `KEEP=1`) runs the experiment, checks the hog was evicted and the calm pods weren't, and cleans up. If the hog isn't evicted on your machine, try `MARGIN_MI=400 make 07-node-pressure-eviction`.

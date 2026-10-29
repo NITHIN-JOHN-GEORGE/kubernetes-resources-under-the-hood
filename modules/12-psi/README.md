@@ -1,40 +1,93 @@
 # 12 · Pressure stall information (PSI)
 
-**Goal:** measure how much time a pod loses *waiting* for CPU, memory and IO, instead of how much it uses.
+**What you'll learn:** how to measure how much time a pod spends *waiting* for CPU, memory or disk, which normal usage graphs can't show you.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`. Run every command from the repo folder.
+
+---
+
+## The idea
+
+Usage tells you how busy something is. Pressure tells you how long things waited.
+
+Think of a shop with one till. "The till was busy 100% of the time" (usage) sounds the same whether one customer was served all day or fifty people queued out of the door. Pressure measures the queue.
+
+## Step 1: Check your kernel supports it
 
 ```bash
-make 12-psi
+docker exec under-the-hood-worker cat /proc/pressure/cpu
 ```
 
-Two pods run on the worker:
-
-| Pod | What it does | Expected pressure |
-|---|---|---|
-| `psi-cpu` | 2 × nproc busy loops, no CPU limit | High `cpu.pressure` |
-| `psi-memory` | Rereads a 192 MiB file with a 64Mi memory limit, so its page cache is reclaimed constantly | Some `memory.pressure` and `io.pressure` |
-
-The module prints `cpu.pressure`, `memory.pressure` and `io.pressure` from inside each container, and `/proc/pressure/cpu` for the whole node before and during the run. If the kernel doesn't support PSI, the module prints `SKIP`.
-
-## Reading the files
-
-```text
-some avg10=97.12 avg60=61.30 avg300=17.80 total=31847213
+```output
+some avg10=0.00 avg60=0.00 avg300=0.21 total=129693248
 full avg10=0.00 avg60=0.00 avg300=0.00 total=0
 ```
 
-- **`some`:** the share of time at least one task in the cgroup was stalled on this resource.
-- **`full`:** the share of time *all* non-idle tasks were stalled at once, so the cgroup made no progress at all.
-- **`avg10` / `avg60` / `avg300`:** moving averages over 10 s, 60 s and 5 min, as a percentage.
-- **`total`:** cumulative stall time in microseconds. Use it to compute your own rates.
+If this file doesn't exist, PSI is switched off in your kernel and the module will print `SKIP`.
 
-## Internals
+**How to read it:**
 
-- **Usage and pressure are different questions.** `cpu.stat` (module 02) says how much CPU a pod got. `cpu.pressure` says how long its threads sat runnable without getting a CPU. A pod at 100% usage with zero pressure is fine; a pod at 30% usage with high pressure is starved.
-- **CPU pressure** comes from contention on the run queue: runnable threads waiting for a CPU.
-- **Memory pressure** is time spent in direct reclaim, waiting for pages to be freed, or refaulting pages that were evicted too early. It rises well before an OOM kill.
-- **IO pressure** is time spent waiting for block IO, which reclaim of dirty pages often triggers.
-- **Where it's used:** systemd-oomd and Meta's oomd kill based on memory pressure. Kubernetes has a `KubeletPSI` feature that exposes these numbers through the Summary API and cAdvisor metrics, so you can graph and alert on them.
+| Part | Meaning |
+|---|---|
+| `some` | Share of time at least one task was stuck waiting |
+| `full` | Share of time *every* task was stuck at once: no progress at all |
+| `avg10`, `avg60`, `avg300` | Averages over the last 10 seconds, 1 minute and 5 minutes, as percentages |
+| `total` | Total time spent waiting since boot, in microseconds |
 
-## Takeaway
+`/proc/pressure/` covers the whole node. Every cgroup also has its own copy: `cpu.pressure`, `memory.pressure` and `io.pressure`.
 
-When a pod is slow but its CPU and memory graphs look fine, check pressure. PSI tells you whether it's waiting, which utilisation can't.
+## Step 2: Create a CPU queue
+
+`psi-cpu` runs twice as many busy loops as the node has CPUs, with no limit, so its threads always outnumber the CPUs. `psi-memory` keeps rereading a 192 MiB file inside a 64Mi memory limit, so the kernel has to keep throwing away cached file data to make room.
+
+```bash
+kubectl create namespace lab            # skip if it already exists
+THREADS=$(( $(docker exec under-the-hood-worker nproc) * 2 ))
+sed "s/__THREADS__/$THREADS/g" modules/12-psi/pods.yaml | kubectl -n lab apply -f -
+kubectl -n lab wait --for=condition=Ready pod/psi-cpu pod/psi-memory
+sleep 20
+```
+
+## Step 3: Read the pressure
+
+```bash
+kubectl -n lab exec psi-cpu -- cat /sys/fs/cgroup/cpu.pressure
+```
+
+From a real run (20 threads on 10 CPUs):
+
+```text
+some avg10=75.19 avg60=24.03 avg300=5.60 total=17362896
+full avg10=0.15 avg60=0.07 avg300=0.01 total=209848
+```
+
+**What it means:** over the last 10 seconds, at least one of this pod's threads was waiting for a CPU 75% of the time. `avg60` is lower only because the pod hasn't been running for a full minute yet.
+
+```bash
+kubectl -n lab exec psi-memory -- cat /sys/fs/cgroup/memory.pressure /sys/fs/cgroup/io.pressure
+```
+
+Here, any non-zero `some` means the pod spent time waiting for the kernel to free memory, or for the disk while it reread data it had just thrown away. How much depends on your disk's speed.
+
+## Why it matters in production
+
+When a service is slow but its CPU and memory graphs look fine, check pressure. High `cpu.pressure` means it's waiting for CPU (too many threads, or a noisy neighbour). Rising `memory.pressure` is often the earliest warning before an OOM kill. Kubernetes can expose these numbers through the kubelet, so you can graph and alert on them.
+
+## Clean up
+
+```bash
+kubectl -n lab delete pod psi-cpu psi-memory
+```
+
+## Summary
+
+| File | Measures |
+|---|---|
+| `cpu.pressure` | Time spent waiting for a CPU |
+| `memory.pressure` | Time spent waiting for memory to be freed |
+| `io.pressure` | Time spent waiting for the disk |
+| `/proc/pressure/*` | The same, for the whole node |
+
+## Shortcut
+
+`make 12-psi` runs all of this and checks that CPU pressure on `psi-cpu` went above 10%.

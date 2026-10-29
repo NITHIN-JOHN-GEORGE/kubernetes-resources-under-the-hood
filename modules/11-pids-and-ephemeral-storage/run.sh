@@ -42,7 +42,6 @@ printf '  pids.max      %s\n  pids.current  %s\n  pids.events   max %s  (pod + c
 note "pids.events 'max' counts the forks refused because of the limit."
 note "Without a limit, one fork bomb in one pod could use up every PID on the node and break the node itself."
 
-kubectl -n "$NS" delete pod pid-hog --wait=false >/dev/null
 kubelet_restore
 
 # ------------------------------------------------------- Ephemeral storage

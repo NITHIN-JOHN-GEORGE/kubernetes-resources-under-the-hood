@@ -1,55 +1,88 @@
 # 10 · LimitRange
 
-**Goal:** give containers default requests and limits, and reject values outside an allowed range.
+**What you'll learn:** how to give every container in a namespace sensible default requests and limits, and how to block values that are too big.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`. Run every command from the repo folder.
+
+---
+
+## Step 1: Create a namespace with rules
 
 ```bash
-make 10-limitrange
+kubectl apply -f modules/10-limitrange/limitrange.yaml
+kubectl -n lab-limits describe limitrange container-defaults
 ```
 
-The module creates namespace `lab-limits` with this LimitRange:
-
-```yaml
-- type: Container
-  defaultRequest: {cpu: 100m, memory: 64Mi}
-  default:        {cpu: 200m, memory: 128Mi}
-  max:            {memory: 256Mi}
-  min:            {memory: 32Mi}
+```output
+Type        Resource  Min   Max    Default Request  Default Limit
+Container   memory    32Mi  256Mi  64Mi             128Mi
+Container   cpu       -     -      100m             200m
 ```
 
-## Example output
+**What a LimitRange is:** a set of rules for each container in a namespace:
 
-From a real run on kind:
+- **Default Request / Default Limit:** filled in when a container doesn't set its own.
+- **Min / Max:** anything outside this range is refused.
 
-```text
-$ kubectl -n lab-limits get pod lr-defaults -o jsonpath='{.spec.containers[0].resources}'
-  {"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"100m","memory":"64Mi"}}
+## Step 2: Create a pod with no resources at all
 
-  kubernetes.io/limit-ranger: LimitRanger plugin set: cpu, memory request for container main; cpu, memory limit for container main
+Open [`pod-no-resources.yaml`](pod-no-resources.yaml): there's no `resources:` section.
 
-  cpu.max     20000 100000
-  memory.max  134217728
-
-  pods "lr-too-big" is forbidden: maximum memory usage per Container is 256Mi, but limit is 512Mi
+```bash
+kubectl apply -f modules/10-limitrange/pod-no-resources.yaml
+kubectl -n lab-limits wait --for=condition=Ready pod/lr-defaults
+kubectl -n lab-limits get pod lr-defaults -o jsonpath='{.spec.containers[0].resources}{"\n"}'
 ```
 
-## What you should see
+```output
+{"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"100m","memory":"64Mi"}}
+```
 
-- `lr-defaults` is created **without** a `resources` section, but its spec comes back with requests `100m`/`64Mi` and limits `200m`/`128Mi`.
-- An annotation `kubernetes.io/limit-ranger: LimitRanger plugin set: cpu, memory request ...; cpu, memory limit ...` records what was filled in.
-- Inside the container, `cpu.max` is `20000 100000` and `memory.max` is `134217728`, exactly as if you had written the values yourself.
-- `lr-too-big` (512Mi limit) is rejected with `maximum memory usage per Container is 256Mi, but limit is 512Mi`.
+**What happened:** Kubernetes filled in the defaults *before saving the pod*. It also leaves a note saying so:
 
-The namespace is deleted on exit (`KEEP=1` keeps it).
+```bash
+kubectl -n lab-limits get pod lr-defaults -o jsonpath='{.metadata.annotations.kubernetes\.io/limit-ranger}{"\n"}'
+```
 
-## Internals
+```output
+LimitRanger plugin set: cpu, memory request for container main; cpu, memory limit for container main
+```
 
-- **Mutating, then validating.** The `LimitRanger` admission plugin first fills in missing values (`default`, `defaultRequest`), then checks `min`, `max` and `maxLimitRequestRatio`. Both happen in the API server before the pod is stored.
-- **Defaults are written into the stored pod.** The kubelet and runtime don't know a LimitRange exists. They see an ordinary spec, which is why the cgroup files match.
-- **Only new pods are affected.** Changing a LimitRange doesn't touch running pods.
-- **If only a limit is set,** the API server's defaulting copies it into the request before LimitRanger runs, so the request equals the limit, not `defaultRequest`.
-- **Types:** `Container` (per container), `Pod` (sum over containers, `min`/`max` only) and `PersistentVolumeClaim` (storage size).
-- **Pairs with ResourceQuota.** A quota on `requests.cpu` rejects pods that don't set one (module 09); a LimitRange default makes them pass.
+## Step 3: Prove the defaults are real
 
-## Takeaway
+```bash
+kubectl -n lab-limits exec lr-defaults -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+```
 
-Put a LimitRange in every shared namespace so that no container runs without requests, and so a typo like `memory: 512Gi` is rejected.
+```output
+20000 100000
+134217728
+```
+
+**What it means:** the injected `200m` CPU limit became `cpu.max` (20 ms per 100 ms) and the `128Mi` memory limit became `memory.max` (134,217,728 bytes), exactly like hand-written values in module 01. The kubelet and the kernel can't tell the difference.
+
+## Step 4: Try something too big
+
+```bash
+kubectl apply -f modules/10-limitrange/pod-too-big.yaml      # memory limit 512Mi
+```
+
+```output
+Error from server (Forbidden): ... maximum memory usage per Container is 256Mi, but limit is 512Mi
+```
+
+## Things worth knowing
+
+- Rules only apply to pods created *after* the LimitRange exists.
+- If a container sets only a limit, Kubernetes copies it into the request before the LimitRange looks, so the request equals the limit.
+- LimitRange and ResourceQuota (module 09) work well together: the quota demands requests, and the LimitRange quietly provides them.
+
+## Clean up
+
+```bash
+kubectl delete namespace lab-limits
+```
+
+## Shortcut
+
+`make 10-limitrange` runs all of this and checks the defaults, the cgroup files and the rejection.

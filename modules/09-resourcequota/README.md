@@ -1,59 +1,88 @@
 # 09 · ResourceQuota
 
-**Goal:** cap the total resources a namespace can request, and see the API server refuse pods that would go over.
+**What you'll learn:** how to cap the total resources a whole namespace (say, one team) can ask for, and how Kubernetes refuses pods that would go over.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`. Run every command from the repo folder.
+
+---
+
+## Step 1: Create a namespace with a budget
 
 ```bash
-make 09-resourcequota
+kubectl apply -f modules/09-resourcequota/quota.yaml
+kubectl -n lab-quota describe quota compute
 ```
 
-The module creates namespace `lab-quota` with this quota:
-
-```yaml
-hard:
-  requests.cpu: 500m
-  requests.memory: 256Mi
-  limits.memory: 512Mi
-  pods: "3"
+```output
+Resource         Used  Hard
+--------         ----  ----
+limits.memory    0     512Mi
+pods             0     3
+requests.cpu     0     500m
+requests.memory  0     256Mi
 ```
 
-Then it tries three pods.
+**What a ResourceQuota is:** a budget for a namespace. `Hard` is the budget; `Used` is the total of what the pods in the namespace have asked for so far.
 
-| Pod | Requests | Result |
-|---|---|---|
-| `q-no-requests` | none | Rejected: `must specify limits.memory ..., requests.cpu ..., requests.memory ...` |
-| `q-small` | 200m / 100Mi | Created |
-| `q-big` | 400m / 100Mi | Rejected: `exceeded quota: compute, requested: requests.cpu=400m, used: requests.cpu=200m, limited: requests.cpu=500m` |
+## Step 2: Try a pod with no requests
 
-The namespace is deleted on exit (`KEEP=1` keeps it).
-
-## Example output
-
-From a real run on kind:
-
-```text
-$ kubectl apply -f pod-no-requests.yaml
-  pods "q-no-requests" is forbidden: failed quota: compute: must specify limits.memory for: main; requests.cpu for: main; requests.memory for: main
-$ kubectl apply -f pod-small.yaml
-  pod/q-small created
-$ kubectl apply -f pod-big.yaml
-  pods "q-big" is forbidden: exceeded quota: compute, requested: requests.cpu=400m, used: requests.cpu=200m, limited: requests.cpu=500m
-
-  Resource         Used   Hard
-  limits.memory    128Mi  512Mi
-  pods             1      3
-  requests.cpu     200m   500m
-  requests.memory  100Mi  256Mi
+```bash
+kubectl apply -f modules/09-resourcequota/pod-no-requests.yaml
 ```
 
-## Internals
+```output
+Error from server (Forbidden): ... failed quota: compute: must specify limits.memory for: main; requests.cpu for: main; requests.memory for: main
+```
 
-- **Enforced at admission, not at runtime.** The `ResourceQuota` admission plugin in the API server checks every create and update. A rejected pod never exists, so there's no event on it and nothing for the scheduler to see. With a Deployment, you find the error in the ReplicaSet's events (`FailedCreate`).
-- **It counts declared numbers, not usage.** Quota adds up requests and limits from pod specs. A pod using 10x its request still counts as its request.
-- **A quota on a resource makes it mandatory.** Once `requests.cpu` is in the quota, pods without a CPU request are rejected. A LimitRange (module 10) can fill in defaults so this doesn't break existing manifests.
-- **Two controllers keep it accurate.** Admission adds usage when a pod is created; the quota controller recalculates `.status.used` periodically, which picks up deleted and finished pods.
-- **Object counts too.** Quotas can also cap `pods`, `services`, `persistentvolumeclaims`, `count/deployments.apps` and more, and can be scoped to a priority class or QoS class with `scopeSelector`.
-- **No cgroup is involved.** Nothing changes on the node.
+**What it means:** once a quota counts something, every pod must declare it. Otherwise Kubernetes couldn't tell how much of the budget it uses.
 
-## Takeaway
+## Step 3: Try a pod that fits
 
-Quotas are how a shared cluster divides capacity between teams. They only work if requests are honest, so pair them with sensible defaults (module 10).
+```bash
+kubectl apply -f modules/09-resourcequota/pod-small.yaml     # asks for 200m CPU
+```
+
+```output
+pod/q-small created
+```
+
+## Step 4: Try a pod that would go over
+
+```bash
+kubectl apply -f modules/09-resourcequota/pod-big.yaml       # asks for 400m CPU
+```
+
+```output
+Error from server (Forbidden): ... exceeded quota: compute, requested: requests.cpu=400m, used: requests.cpu=200m, limited: requests.cpu=500m
+```
+
+**What it means:** 200m is used, and 400m more would make 600m, over the 500m budget.
+
+```bash
+kubectl -n lab-quota describe quota compute
+```
+
+```output
+Resource         Used   Hard
+limits.memory    128Mi  512Mi
+pods             1      3
+requests.cpu     200m   500m
+requests.memory  100Mi  256Mi
+```
+
+## Things worth knowing
+
+- **It's checked when the pod is created, not while it runs.** A rejected pod never exists. With a Deployment, you won't see an error on any pod; look at the ReplicaSet's events for `FailedCreate`.
+- **It counts what pods ask for, not what they use.** A pod using ten times its request still counts as its request.
+- **No cgroup file is involved.** Nothing changes on the node.
+- Quotas can also cap object counts (services, volumes, deployments) and can apply to just one priority class.
+
+## Clean up
+
+```bash
+kubectl delete namespace lab-quota
+```
+
+## Shortcut
+
+`make 09-resourcequota` runs all three pods and checks each result.

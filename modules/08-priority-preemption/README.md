@@ -1,49 +1,96 @@
 # 08 · Priority classes and preemption
 
-**Goal:** see a high-priority pod remove a low-priority pod to make room for itself.
+**What you'll learn:** how to mark some pods as more important than others, and what happens when an important pod can't find room.
+
+**Time:** about 5 minutes. **You need:** the cluster from `make cluster`. Run every command from the repo folder.
+
+---
+
+## Step 1: Create two priority levels
 
 ```bash
-make 08-priority-preemption
+kubectl apply -f modules/08-priority-preemption/priorityclasses.yaml
+kubectl get priorityclass
 ```
 
-The module creates two PriorityClasses, `lab-low` (1000) and `lab-high` (1000000). It measures the worker's free CPU and gives each pod a request just below it, so only one pod fits. `prio-low` is scheduled first; then `prio-high` arrives.
+```output
+NAME                      VALUE        GLOBAL-DEFAULT
+lab-high                  1000000      false
+lab-low                   1000         false
+system-cluster-critical   2000000000   false
+system-node-critical      2000001000   false
+```
 
-## Example output
+**What a PriorityClass is:** just a name with a number. Pods refer to it by name (`priorityClassName: lab-high`), and a bigger number means more important. The two `system-` ones come with every cluster and are used by Kubernetes' own critical pods.
 
-From a real run on kind (10 CPUs, so each pod asked for 9800m):
+## Step 2: Find out how much CPU is free
+
+```bash
+kubectl describe node under-the-hood-worker | grep -A5 "Allocated resources"
+```
+
+You'll see something like:
 
 ```text
-  allocatable 10000m   already requested 100m   free 9900m
-
-  REASON      MESSAGE
-  Scheduled   Successfully assigned lab/prio-low to under-the-hood-worker
-  Started     Container started
-  Preempted   Preempted by pod 2cb1a068-49ce-45ac-bd4b-1e19896e9808 on node under-the-hood-worker
-  Killing     Stopping container main
-
-  NAME        PRIORITY   STATUS    NODE
-  prio-high   1000000    Running   under-the-hood-worker
-  prio-low    1000       Failed    under-the-hood-worker
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests    Limits
+  --------           --------    ------
+  cpu                100m (1%)   100m (1%)
 ```
 
-The `100m` already requested is kindnet, the CNI pod that runs on every kind node.
+Allocatable CPU on this node was 10 (10,000m), and 100m is already requested, so 9,900m is free. Work out yours the same way, then take away another 100m to leave a little gap:
 
-## What you should see
+```bash
+CPU=9800m     # replace with: allocatable - requested - 100m
+```
 
-- `prio-low` gets a `Preempted` event with a message like `Preempted by pod <uid> on node under-the-hood-worker`, shows `Failed` and is deleted.
-- `prio-high` becomes `Running` on the worker.
-- `.spec.priority` on each pod holds the number from its class.
+## Step 3: Fill the node with a low-priority pod
 
-## Internals
+```bash
+kubectl create namespace lab            # skip if it already exists
+sed "s/__CPU__/$CPU/" modules/08-priority-preemption/pod-low.yaml | kubectl -n lab apply -f -
+kubectl -n lab wait --for=condition=Ready pod/prio-low
+```
 
-- **Priority is a number on the pod.** The `Priority` admission plugin resolves `priorityClassName` and writes the value into `.spec.priority` when the pod is created. Changing the class later doesn't change existing pods.
-- **The scheduling queue is ordered by priority.** Pending high-priority pods are tried before low-priority ones.
-- **Preemption runs only when a pod can't be scheduled.** The scheduler looks for a node where removing lower-priority pods would make the pod fit, picks the victims that cause the least disruption, sets `.status.nominatedNodeName` on the preemptor, and deletes the victims gracefully.
-- **PodDisruptionBudgets are respected on a best-effort basis.** The scheduler prefers victims that don't violate a PDB, but will violate one if there is no other way.
-- **`preemptionPolicy: Never`** gives a pod a place near the front of the queue without letting it evict anyone.
-- **Priority also feeds node-pressure eviction** (module 07): among pods using more than their requests, lower priority goes first.
-- **No cgroup is involved.** Priority is purely a scheduler and kubelet decision. The kernel never sees it.
+`prio-low` now *requests* almost all the node's CPU. It doesn't use it, it just sleeps, but as far as the scheduler is concerned the node is full.
 
-## Takeaway
+## Step 4: Send in the high-priority pod
 
-Give critical workloads a PriorityClass, and keep the number of classes small. If everything is high priority, nothing is.
+```bash
+sed "s/__CPU__/$CPU/" modules/08-priority-preemption/pod-high.yaml | kubectl -n lab apply -f -
+kubectl -n lab get pods -l module=08 -w
+```
+
+Within a few seconds `prio-low` goes away and `prio-high` starts. Press Ctrl-C, then look at why:
+
+```bash
+kubectl -n lab get events --field-selector involvedObject.name=prio-low
+```
+
+```output
+REASON      MESSAGE
+Preempted   Preempted by pod 2cb1a068-... on node under-the-hood-worker
+Killing     Stopping container main
+```
+
+**What happened:** `prio-high` didn't fit. Instead of leaving it `Pending`, the scheduler looked for lower-priority pods it could remove to make room, found `prio-low`, and deleted it. This is called **preemption**.
+
+## Things worth knowing
+
+- Priority is copied onto the pod when it's created (`kubectl get pod prio-high -o jsonpath='{.spec.priority}'` shows `1000000`). Changing the class later doesn't change existing pods.
+- Higher-priority pods are also tried first when several are waiting to be scheduled.
+- Priority also matters for eviction (module 07): among pods using more than their requests, lower priority goes first.
+- `preemptionPolicy: Never` lets a pod jump the queue without pushing anyone out.
+- No cgroup file is involved. This is all decided by the scheduler.
+
+## Clean up
+
+```bash
+kubectl -n lab delete pod -l module=08
+kubectl delete priorityclass lab-low lab-high
+```
+
+## Shortcut
+
+`make 08-priority-preemption` works out the free CPU for you, runs both pods and checks the preemption happened.
