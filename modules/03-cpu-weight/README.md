@@ -62,7 +62,7 @@ A real run on a 10-CPU node, measured by the shortcut:
   request ratio         8.0x  (800m / 100m)
 ```
 
-**What it means:** with both pods fighting over every CPU, `weight-high` got about 8 times more CPU time than `weight-low`, the same ratio as their requests.
+**What it means:** with both pods fighting over every CPU, `weight-high` got about 8 times more CPU time than `weight-low`, close to the ratio of their requests. That's one run, not a guarantee: the real split depends on the whole cgroup tree and whatever else is competing for the CPUs.
 
 ## Why it matters in production
 

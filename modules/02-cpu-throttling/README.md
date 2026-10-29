@@ -37,12 +37,12 @@ max 100000
 
 **What `cpu.max` is:** two numbers, both in microseconds (millionths of a second).
 
-- The second number is the **period**: the kernel hands out CPU time in windows of 100,000 µs, which is 100 milliseconds.
+- The second number is the **period**: the kernel hands out CPU time in windows of 100,000 µs, which is 100 milliseconds (the default).
 - The first number is the **quota**: how much CPU time the container may use inside each window. `20000` means 20 ms. `max` means no limit.
 
 So `20000 100000` reads as: "in every 100 ms, this container may run for 20 ms in total." That's `200m`.
 
-The important part is **in total, across all its threads**. Four busy threads running on four CPUs at once burn through 20 ms in about 5 ms of real time. Then the kernel stops the *whole container* until the next window starts, 95 ms later. That pause is called **throttling**.
+The important part is **in total, across all its threads**. Four busy threads running on four CPUs at once burn through 20 ms in about 5 ms of real time. After that, any work in the group that's ready to run has to wait until the next window starts, about 95 ms later in this example. That waiting is called **throttling**.
 
 ## Step 4: Watch the throttling counter
 

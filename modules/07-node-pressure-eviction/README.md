@@ -73,7 +73,7 @@ Evicted: The node was low on resource: memory. Threshold quantity: 7141Mi, avail
 Container main was using 721996Ki, request is 0, has larger consumption of memory.
 ```
 
-**What it means:** the kubelet ranks pods by how far they are *above their memory request*. The hog had a request of 0 and was using about 700 MiB, so it was first in line. The calm pods were using less than they asked for, so they were safe.
+**What it means:** roughly, the kubelet ranks pods by (1) whether their memory use is above their request, (2) their priority, and (3) how far above their request they are. The hog had a request of 0 and was using about 700 MiB, so it was first in line. The calm pods were using less than they asked for. Treat this as an intuition; the [Kubernetes docs](https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/) have the full rules.
 
 ## Eviction vs OOM kill
 
@@ -82,7 +82,7 @@ Container main was using 721996Ki, request is 0, has larger consumption of memor
 | Who does it | The kernel | The kubelet |
 | Trigger | One container hits its own `memory.max` | The whole node gets low on memory |
 | What you see | `OOMKilled`, exit code 137, container restarts | `Evicted`, pod becomes `Failed` and is not restarted on this node |
-| Who is chosen | The process that went over its limit | The pod furthest above its memory request |
+| Who is chosen | A process in the cgroup over its limit | Ranked by usage vs request, and priority |
 
 A container using more than its request but less than its limit is fine as far as the kernel is concerned. It only becomes a target when the node runs short.
 
@@ -95,7 +95,7 @@ kubectl -n lab delete pod -l module=07
 ## Summary
 
 - The kubelet watches `memory.available` and evicts pods when it falls below `evictionHard`.
-- Pods using less than their memory request are evicted last. BestEffort pods, with a request of 0, go first.
+- Pods using more memory than they requested, especially low-priority and BestEffort pods, are at the greatest risk.
 - Evicted pods are not restarted on the same node. A Deployment creates a replacement, possibly on another node.
 
 ## Shortcut

@@ -80,7 +80,7 @@ kubectl -n lab exec requests-limits -- cat /sys/fs/cgroup/memory.min
 0
 ```
 
-**What it means:** this is the surprise. `requests.memory: 64Mi` isn't written to any file the kernel uses. Only the scheduler uses it, to pick a node with enough room. At runtime it protects nothing.
+**What it means:** this is the surprise. `memory.min` is memory the kernel would protect for this group even when the machine is short, and in this lab's configuration it's `0`. By default, Kubernetes uses the memory request to pick a node and to decide who to evict first when the node runs short (module 07), but doesn't ask the kernel to protect it. Clusters with the `MemoryQoS` feature turned on (still alpha) map requests to `memory.min`, so behaviour can differ on other clusters.
 
 ## Step 7 (optional): Look from the node's side
 
@@ -107,7 +107,7 @@ kubectl -n lab delete pod requests-limits
 | `limits.cpu: 500m` | `cpu.max` | `50000 100000` | At most 50ms of CPU every 100ms |
 | `limits.memory: 128Mi` | `memory.max` | `134217728` | 128 MiB, then the kernel kills it |
 | `requests.cpu: 250m` | `cpu.weight` | `35` | A share of CPU, only used when CPUs are busy |
-| `requests.memory: 64Mi` | `memory.min` | `0` | Nothing. Only the scheduler uses it |
+| `requests.memory: 64Mi` | `memory.min` | `0` | No kernel protection here; used for scheduling and eviction |
 
 ## Shortcut
 
