@@ -7,14 +7,18 @@ export CLUSTER
 
 # Every folder under modules/ is a module, in numeric order.
 MODULES := $(sort $(notdir $(wildcard modules/*)))
+INCIDENTS := $(sort $(notdir $(wildcard incidents/*-*)))
 
-.PHONY: help prereqs cluster delete-cluster all check-all clean reset restore-kubelet $(MODULES)
+.PHONY: help prereqs cluster delete-cluster all check-all clean reset restore-kubelet watch incident-clean $(MODULES)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-26s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "  Modules: make <module>, for example: make 02-cpu-throttling"
+	@echo "  Modules: make <module>, for example: make 01-cgroups-by-hand"
 	@for m in $(MODULES); do echo "    $$m"; done
+	@echo ""
+	@echo "  Incidents (debugging challenges): make incident-1, make hint-1, make answer-1 CAUSE=<your answer>"
+	@for i in $(INCIDENTS); do echo "    $$i"; done
 
 prereqs: ## Check that docker, kind and kubectl are installed
 	@./scripts/prereqs.sh
@@ -52,3 +56,19 @@ reset: ## Keep the cluster, but remove everything the lab created and undo any k
 
 restore-kubelet: ## Only put back the worker's original kubelet config
 	@docker exec $(CLUSTER)-worker sh -c 'if [ -f /var/lib/kubelet/config.yaml.lab-backup ]; then mv /var/lib/kubelet/config.yaml.lab-backup /var/lib/kubelet/config.yaml && systemctl restart kubelet && echo restored; else echo "nothing to restore"; fi'
+
+watch: ## Live view of a pod's cgroup files: make watch POD=<name>
+	@if [ -z "$(POD)" ]; then echo "Usage: make watch POD=<pod name>   (pods in namespace lab)"; exit 1; fi
+	@./scripts/watch.sh $(POD)
+
+incident-%: ## Start an incident challenge: make incident-1
+	@./incidents/$*-*/start.sh
+
+hint-%: ## Show a hint for an incident: make hint-1
+	@cat incidents/$*-*/hint.md
+
+answer-%: ## Check your answer: make answer-1 CAUSE=<your answer>  (CAUSE=show to just see it)
+	@./incidents/$*-*/answer.sh "$(CAUSE)"
+
+incident-clean: ## Delete the incident pods
+	@kubectl -n lab delete pod -l incident --ignore-not-found

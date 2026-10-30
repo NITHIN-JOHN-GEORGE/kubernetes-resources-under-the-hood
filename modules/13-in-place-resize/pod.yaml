@@ -5,6 +5,8 @@ kind: Pod
 metadata:
   name: resize-demo
   labels: {module: "13"}
+  annotations:
+    what: "Just sleeps. We change its CPU and memory while it runs."
 spec:
   nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
   terminationGracePeriodSeconds: 1

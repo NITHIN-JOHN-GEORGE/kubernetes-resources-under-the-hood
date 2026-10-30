@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: checkout-api
+  labels: {incident: "1"}
+  annotations:
+    what: "A pretend checkout API. Every second it handles one request by splitting the work across 4 worker processes."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: python:3.12-alpine
+      command: ["python", "-u", "-c"]
+      args:
+        - |
+          import multiprocessing as mp, time
+          def work(_):                      # about 40 ms of real CPU work
+              t = time.process_time()
+              while time.process_time() - t < 0.04:
+                  pass
+          if __name__ == "__main__":
+              pool = mp.Pool(4)
+              n = 0
+              while True:
+                  n += 1
+                  start = time.time()
+                  pool.map(work, range(4))  # one request = 4 pieces of work in parallel
+                  print(f"request {n}: {(time.time() - start) * 1000:.0f} ms   (target: under 100 ms)", flush=True)
+                  time.sleep(1)
+      resources:
+        requests: {cpu: 200m, memory: 128Mi}
+        limits:   {cpu: 200m, memory: 256Mi}

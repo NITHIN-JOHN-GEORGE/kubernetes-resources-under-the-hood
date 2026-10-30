@@ -1,0 +1,51 @@
+# psi-cpu runs twice as many busy loops as the node has CPUs (__THREADS__), with no CPU limit,
+# so its threads are always waiting for a CPU.
+# psi-memory keeps rereading a file larger than its memory limit, forcing constant reclaim.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: psi-cpu
+  labels: {module: "11"}
+  annotations:
+    what: "Twice as many busy loops as the node has CPUs, so its threads always queue for a CPU."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: busybox:1.36
+      command: ["sh", "-c", "i=0; while [ $i -lt __THREADS__ ]; do (while :; do :; done) & i=$((i+1)); done; wait"]
+      resources:
+        requests: {cpu: 100m, memory: 16Mi}
+        limits:   {memory: 64Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: psi-memory
+  labels: {module: "11"}
+  annotations:
+    what: "Rereads a 192 MiB file inside a 64Mi limit, so the kernel keeps reclaiming cache."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: busybox:1.36
+      # Build a 192 MiB file in 16 MiB steps, fsyncing each step so dirty pages never pile up
+      # past the limit (a plain 200 MiB write got this pod OOM-killed). Then read it over and
+      # over: the page cache can't hold it under a 64Mi limit, so the kernel keeps reclaiming.
+      command:
+        - sh
+        - -c
+        - |
+          i=0
+          while [ $i -lt 12 ]; do
+            dd if=/dev/zero of=/tmp/f bs=1M count=16 seek=$((i*16)) conv=notrunc,fsync 2>/dev/null
+            i=$((i+1))
+          done
+          echo "file ready"
+          while :; do cat /tmp/f > /dev/null; done
+      resources:
+        requests: {cpu: 200m, memory: 64Mi}
+        limits:   {cpu: 500m, memory: 64Mi}

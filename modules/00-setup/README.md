@@ -30,7 +30,7 @@ docker exec under-the-hood-worker stat -fc %T /sys/fs/cgroup/
 cgroup2fs
 ```
 
-**What `/sys/fs/cgroup` is:** it looks like a folder full of files, but nothing in it is stored on disk. It's a window into the kernel. When you `cat` a file there, the kernel answers with a live value ("this group has used 3.2 seconds of CPU"). When you write to one, you change a setting ("this group may use at most 128 MiB"). The same trick powers `/proc`, which you'll meet in module 05.
+**What `/sys/fs/cgroup` is:** it looks like a folder full of files, but nothing in it is stored on disk. It's a window into the kernel. When you `cat` a file there, the kernel answers with a live value ("this group has used 3.2 seconds of CPU"). When you write to one, you change a setting ("this group may use at most 128 MiB"). The same trick powers `/proc`, which you'll meet in module 08.
 
 **What `stat -fc %T` does:** it prints the *type* of filesystem mounted at that path. `cgroup2fs` means cgroups **v2**, the modern layout where everything lives in one tree. If you see `tmpfs`, the node is on the older v1 layout, which this lab doesn't cover.
 
@@ -83,7 +83,7 @@ kubelet-kubepods-besteffort.slice
 kubelet-kubepods-burstable.slice
 ```
 
-**What it means:** this folder is the box that holds *every* pod on the node. Inside it, pods are sorted into boxes by their QoS class (module 05). Guaranteed pods get a folder directly in here; Burstable and BestEffort pods go into these two sub-boxes. Inside each pod's folder, there's one more folder per container. It's boxes inside boxes, and **a box can never use more than the box it sits in**.
+**What it means:** this folder is the box that holds *every* pod on the node. Inside it, pods are sorted into boxes by their QoS class (module 08). Guaranteed pods get a folder directly in here; Burstable and BestEffort pods go into these two sub-boxes. Inside each pod's folder, there's one more folder per container. It's boxes inside boxes, and **a box can never use more than the box it sits in**.
 
 ## Step 6: Read the ceiling for all pods
 
@@ -97,7 +97,7 @@ docker exec under-the-hood-worker cat /sys/fs/cgroup/kubelet.slice/kubelet-kubep
 
 (Your number depends on how much memory Docker has.)
 
-**What `memory.max` is:** the most memory, in bytes, that everything inside this box may use together. Here it's about 7.75 GiB, roughly all the memory Docker gave the node, because kind reserves nothing for the system. Module 06 explains how this number is chosen.
+**What `memory.max` is:** the most memory, in bytes, that everything inside this box may use together. Here it's about 7.75 GiB, roughly all the memory Docker gave the node, because kind reserves nothing for the system. Module 09 explains how this number is chosen.
 
 ## Summary
 

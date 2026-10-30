@@ -27,8 +27,21 @@ run() { step "$*"; "$@"; }
 
 ensure_ns() { kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS" >/dev/null; }
 
-# Apply a manifest into the lab namespace.
-apply() { ensure_ns; run kubectl -n "$NS" apply -f "$1"; }
+# Apply a manifest into the lab namespace, then show what it started.
+apply() {
+  ensure_ns
+  run kubectl -n "$NS" apply -f "$1"
+  local pods; pods="$(kubectl apply --dry-run=client -o name -f "$1" | sed -n 's#^pod/##p')"
+  show_pods $pods
+}
+
+# Say what each pod is for (its "what" annotation) and its requests and limits.
+show_pods() {
+  note "What's running:"
+  for p in "$@"; do
+    kubectl -n "$NS" get pod "$p" -o jsonpath='  {.metadata.name}: {.metadata.annotations.what}{"\n"}    requests {.spec.containers[0].resources.requests}   limits {.spec.containers[0].resources.limits}{"\n"}'
+  done
+}
 
 wait_ready() { run kubectl -n "$NS" wait --for=condition=Ready "pod/$1" --timeout="$WAIT"; }
 
@@ -78,7 +91,7 @@ _cleanup() {
 }
 
 # ---------------------------------------------------------------------------
-# Kubelet config changes on the worker node (modules 07 and 11).
+# Kubelet config changes on the worker node (modules 10 and 12).
 # The original config is backed up once and always restored by kubelet_restore.
 # ---------------------------------------------------------------------------
 KUBELET_CFG=/var/lib/kubelet/config.yaml

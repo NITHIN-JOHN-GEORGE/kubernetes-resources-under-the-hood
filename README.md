@@ -10,7 +10,7 @@ A hands-on lab that shows what **requests, limits, QoS classes, priority classes
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![cgroups v2](https://img.shields.io/badge/cgroups-v2-38E8C6?style=flat-square&logo=linux&logoColor=black)
 ![macOS | Windows](https://img.shields.io/badge/runs_on-macOS_%7C_Windows_WSL2-555?style=flat-square)
-![Modules](https://img.shields.io/badge/modules-14-7C8CFF?style=flat-square)
+![Modules](https://img.shields.io/badge/modules-17-7C8CFF?style=flat-square)
 
 **[📖 Read the illustrated walkthrough](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)** &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Setup](#setup)
 
@@ -33,7 +33,7 @@ Every `resources:` block you write ends up as a few numbers in files under `/sys
 git clone https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood.git
 cd kubernetes-resources-under-the-hood
 make cluster              # 2-node kind cluster inside Docker (about a minute)
-make 02-cpu-throttling    # run any module
+make 01-cgroups-by-hand   # start here, then go in order
 ```
 
 Each module prints what it does, reads the kernel files, and ends with checks:
@@ -44,6 +44,14 @@ Each module prints what it does, reads the kernel files, and ends with checks:
   cpu-unlimited  -                0              several thousand
 PASS cpu-limited was throttled in 249 periods
 PASS cpu-unlimited was never throttled
+```
+
+Before any measurement, a module tells you **what it started and why**: each pod carries a one-line `what` note, printed with its requests and limits.
+
+```text
+What's running:
+  cpu-limited: 4 busy loops that each want a whole CPU, squeezed into a 200m limit.
+    requests {"cpu":"100m","memory":"16Mi"}   limits {"cpu":"200m","memory":"32Mi"}
 ```
 
 > [!TIP]
@@ -58,53 +66,94 @@ PASS cpu-unlimited was never throttled
   </picture>
 </p>
 
-#### 🧱 Foundations
+#### 🧱 Part 1 · Cgroups from scratch
 
 | | Module | What you'll see |
 |:-:|---|---|
-| `00` | [**cgroups v2 on a node**](modules/00-setup) | The cgroup tree the kubelet builds |
-| `01` | [**Requests and limits**](modules/01-requests-and-limits) | Your YAML written into `cpu.weight`, `cpu.max`, `memory.max` |
+| `00` | [**cgroups v2 on a node**](modules/00-setup) | The node's cgroup tree, and the box that holds every pod |
+| `01` | [**Build a cgroup by hand**](modules/01-cgroups-by-hand) | `mkdir`, `cpu.max`, `cgroup.procs`: throttle a process and OOM-kill another, with no Kubernetes |
+| `02` | [**Follow one pod down**](modules/02-follow-the-pod) | The same numbers at every layer: pod spec → runtime spec → systemd scope → cgroup files |
+| `03` | [**Requests and limits**](modules/03-requests-and-limits) | Which line of YAML becomes which file |
 
-#### ⚙️ CPU
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `02` | [**CPU throttling**](modules/02-cpu-throttling) | `nr_throttled` climbing under a limit while the node is idle |
-| `03` | [**CPU weight**](modules/03-cpu-weight) | Contended CPU split in proportion to requests |
-
-#### 🧠 Memory and QoS
+#### ⚙️ Part 2 · CPU
 
 | | Module | What you'll see |
 |:-:|---|---|
-| `04` | [**Memory limits and OOM kills**](modules/04-memory-and-oom) | `OOMKilled`, exit code 137, `oom_kill` in `memory.events` |
-| `05` | [**QoS classes**](modules/05-qos-classes) | Guaranteed, Burstable, BestEffort slices and `oom_score_adj` |
+| `04` | [**CPU weight**](modules/04-cpu-weight) | Contended CPU split by request, and the old vs new shares-to-weight formula |
+| `05` | [**CPU throttling**](modules/05-cpu-throttling) | `nr_throttled` climbing under a limit while the node is idle |
 
-#### 🗓️ Scheduling and eviction
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `06` | [**Node allocatable**](modules/06-node-allocatable) | Capacity vs allocatable, and a pod stuck on `Insufficient memory` |
-| `07` | [**Node-pressure eviction**](modules/07-node-pressure-eviction) | The kubelet evicting a BestEffort hog under `MemoryPressure` ¹ |
-| `08` | [**Priority and preemption**](modules/08-priority-preemption) | A high-priority pod pushing a low-priority one off the node |
-
-#### 🛡️ Guardrails
+#### 🧠 Part 3 · Memory
 
 | | Module | What you'll see |
 |:-:|---|---|
-| `09` | [**ResourceQuota**](modules/09-resourcequota) | `must specify` and `exceeded quota` at admission |
-| `10` | [**LimitRange**](modules/10-limitrange) | Injected defaults landing in `cpu.max` and `memory.max` |
-| `11` | [**PIDs and ephemeral storage**](modules/11-pids-and-ephemeral-storage) | `pids.max`, refused forks, eviction for disk use ¹ |
+| `06` | [**Memory limits and OOM kills**](modules/06-memory-and-oom) | `OOMKilled`, exit code 137, `oom_kill` in `memory.events` |
+| `07` | [**Memory, properly**](modules/07-memory-deep-dive) | File cache reclaimed without harm, anonymous memory OOM-killed, the working set |
 
-#### 🔭 Observe and adjust
+#### 🖥️ Part 4 · The whole node
 
 | | Module | What you'll see |
 |:-:|---|---|
-| `12` | [**Pressure stall information**](modules/12-psi) | `cpu.pressure`, `memory.pressure`, `io.pressure` |
+| `08` | [**QoS classes**](modules/08-qos-classes) | Guaranteed, Burstable, BestEffort slices and `oom_score_adj` |
+| `09` | [**Node allocatable**](modules/09-node-allocatable) | Capacity vs allocatable, and a pod stuck on `Insufficient memory` |
+| `10` | [**Node-pressure eviction**](modules/10-node-pressure-eviction) | The kubelet evicting a BestEffort hog under `MemoryPressure` ¹ |
+
+#### 🔭 Part 5 · Observe, limit and adjust
+
+| | Module | What you'll see |
+|:-:|---|---|
+| `11` | [**Pressure stall information**](modules/11-psi) | `cpu.pressure`, `memory.pressure`, `io.pressure` |
+| `12` | [**PIDs and ephemeral storage**](modules/12-pids-and-ephemeral-storage) | `pids.max`, refused forks, eviction for disk use ¹ |
 | `13` | [**In-place resize**](modules/13-in-place-resize) | `cpu.max` and `memory.max` changing with no restart (1.33+) |
+
+#### 🛡️ Extras · Kubernetes policy (no cgroups involved)
+
+| | Module | What you'll see |
+|:-:|---|---|
+| `14` | [**ResourceQuota**](modules/14-resourcequota) | `must specify` and `exceeded quota` at admission |
+| `15` | [**LimitRange**](modules/15-limitrange) | Injected defaults landing in `cpu.max` and `memory.max` |
+| `16` | [**Priority and preemption**](modules/16-priority-preemption) | A high-priority pod pushing a low-priority one off the node |
 
 <sub>¹ Temporarily changes the worker's kubelet config and always restores it on exit.</sub>
 
 **Each module folder has a hands-on README.** You type the commands yourself, one step at a time, and each step shows what you should see and explains it in plain English, including the Linux files involved (`cpu.max`, `memory.max`, `cpu.stat`, `memory.events`, `/proc/<pid>/oom_score_adj` and more). The `make` target runs the same steps in one go and checks the results.
+
+## Watch it live
+
+Open a second terminal while a module runs (with `KEEP=1`) and watch the kernel's numbers move once a second. Each line names the file it came from.
+
+```bash
+KEEP=1 make 05-cpu-throttling        # terminal 1
+make watch POD=cpu-limited           # terminal 2
+```
+
+```text
+watching cpu-limited   (Ctrl-C to stop)
+
+CPU
+  limit        200m                             (cpu.max: 20000 100000)
+  used         200m in the last second          (cpu.stat: usage_usec)
+  throttled    10 of 10 periods in the last second   (cpu.stat: nr_throttled / nr_periods)
+
+MEMORY ...   PRESSURE ...
+```
+
+`./scripts/watch.sh --cgroup /sys/fs/cgroup/lab-cpu` watches any cgroup on the node, like the ones you build by hand in module 01.
+
+## Incidents: debug it yourself
+
+Once you've done the modules, try the [**incidents**](incidents): a broken pod, a ticket that sounds like a real page, and no instructions. You dig through the cgroup files yourself.
+
+| # | Ticket |
+|:-:|---|
+| `1` | "Checkout is slow, but the CPU graph is under its limit" |
+| `2` | "OOMKilled, but the dashboard never went above half" |
+| `3` | "Pending for ages, the node's memory is almost empty" |
+
+```bash
+make incident-1                  # start it and read the ticket
+make hint-1                      # stuck?
+make answer-1 CAUSE=<answer>     # checks you, explains, shows the fix
+```
 
 ## Setup
 
@@ -156,9 +205,11 @@ Then run `make 00-setup`. If it reports that the node isn't on cgroups v2, follo
 | Command | What it does |
 |---|---|
 | `make help` | List every target |
-| `make <module>` | Run one module, e.g. `make 04-memory-and-oom` |
+| `make <module>` | Run one module, e.g. `make 06-memory-and-oom` |
 | `make all` | Run every module in order |
 | `KEEP=1 make <module>` | Keep the module's pods so you can explore |
+| `make watch POD=<pod>` | Live view of a pod's cgroup files |
+| `make incident-N` / `hint-N` / `answer-N CAUSE=...` | Debugging challenges; `make incident-clean` removes them |
 | `make reset` | Keep the cluster; remove everything the lab created and undo any kubelet change |
 | `make clean` | Delete the whole kind cluster (`make cluster` to start again) |
 
