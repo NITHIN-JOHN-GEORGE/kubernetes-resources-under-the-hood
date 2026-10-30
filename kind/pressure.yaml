@@ -1,0 +1,23 @@
+# Profile "pressure": the kubelet evicts pods when less than 75% of the node's memory is
+# available, instead of the usual 100Mi. A memory hog can push the node there in under a
+# minute, so lab 18 can show node-pressure eviction without editing anything live.
+# (The disk thresholds are turned off so a nearly full laptop disk doesn't evict pods too.)
+# Kubernetes version pinned so every reader runs what the labs were tested on (kind v0.33.0).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: under-the-hood
+kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    evictionHard:
+      memory.available: "75%"
+      nodefs.available: "0%"
+      nodefs.inodesFree: "0%"
+      imagefs.available: "0%"
+    evictionPressureTransitionPeriod: 10s
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    labels: {lab-profile: pressure}

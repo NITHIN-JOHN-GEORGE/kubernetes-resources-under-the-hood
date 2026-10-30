@@ -1,0 +1,23 @@
+kubectl apply -f labs/16-memory-limits-and-oom/pod.yaml
+pod/memory-hog created
+sleep 20
+kubectl get pod memory-hog
+NAME         READY   STATUS    RESTARTS      AGE
+memory-hog   1/1     Running   2 (16s ago)   21s
+kubectl logs memory-hog --previous | tail -3
+allocated 30 MiB
+allocated 40 MiB
+allocated 50 MiB
+kubectl get pod memory-hog -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason} exit={.status.containerStatuses[0].lastState.terminated.exitCode}{"\n"}'
+OOMKilled exit=137
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh memory-hog)/memory.events"
+./scripts/pod-cgroup.sh memory-hog
+low 0
+high 0
+max 59
+oom 2
+oom_kill 4
+oom_group_kill 2
+PASS the last termination was OOMKilled
+PASS exit code 137
+PASS memory.events counts 4 OOM kill(s)

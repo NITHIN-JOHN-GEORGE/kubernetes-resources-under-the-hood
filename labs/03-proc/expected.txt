@@ -1,0 +1,70 @@
+docker run -d --name lab-box --cpus=0.5 --memory=128m ubuntu sleep infinity
+b8253b3f7eead28813394b38510cb1da7e22a9af292e8410298aba94c52d70c6
+docker exec lab-box ls /proc
+1
+6
+buddyinfo
+bus
+cgroups
+cmdline
+config.gz
+consoles
+cpuinfo
+crypto
+device-tree
+devices
+diskstats
+docker
+driver
+execdomains
+filesystems
+fs
+interrupts
+iomem
+ioports
+irq
+kallsyms
+kcore
+key-users
+keys
+kmsg
+kpagecgroup
+kpagecount
+kpageflags
+loadavg
+locks
+meminfo
+misc
+modules
+mounts
+net
+pagetypeinfo
+partitions
+pressure
+scsi
+self
+slabinfo
+softirqs
+stat
+swaps
+sys
+sysrq-trigger
+sysvipc
+thread-self
+timer_list
+tty
+uptime
+version
+vmallocinfo
+vmstat
+zoneinfo
+docker exec lab-box cat /proc/self/comm
+cat
+docker exec lab-box grep Threads /proc/self/status
+Threads:	1
+docker exec lab-box grep VmRSS /proc/self/status
+VmRSS:	    1544 kB
+docker exec lab-box cat /proc/self/cgroup
+0::/
+PASS /proc/self/comm names the process reading it (cat)
+PASS /proc/self/cgroup reads 0::/ inside the container

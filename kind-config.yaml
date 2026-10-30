@@ -1,8 +1,0 @@
-# Two-node kind cluster used by every module.
-# Pods in the lab are pinned to the worker node so the cgroup files are easy to find.
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: under-the-hood
-nodes:
-  - role: control-plane
-  - role: worker

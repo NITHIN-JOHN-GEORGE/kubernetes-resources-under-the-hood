@@ -1,0 +1,16 @@
+# Low-priority pod. __CPU__ is filled in with sed (see the README) so it takes nearly all free CPU on the worker.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prio-low
+  annotations:
+    what: "Just sleeps, while requesting almost all the node's free CPU. Low priority."
+spec:
+  priorityClassName: lab-low
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: __CPU__, memory: 16Mi}

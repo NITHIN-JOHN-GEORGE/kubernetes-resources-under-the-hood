@@ -1,0 +1,26 @@
+docker run -d --name lab-cpu --cpus=0.2 lab-tools:1.0 burn --threads 4
+eb283a46eaa571bbef54c06a695d8bfa090b57c3beeee3f322640a03a5eeb536
+sleep 5
+docker exec lab-cpu grep -E 'nr_periods|nr_throttled' /sys/fs/cgroup/cpu.stat
+nr_periods 63
+nr_throttled 63
+sleep 5
+docker exec lab-cpu grep -E 'nr_periods|nr_throttled' /sys/fs/cgroup/cpu.stat
+nr_periods 121
+nr_throttled 121
+docker ps --filter name=lab-cpu --format '{{.Names}}: {{.Status}}'
+lab-cpu: Up 12 seconds
+docker run --name lab-mem --memory=64m --memory-swap=64m lab-tools:1.0 alloc --mib 10 --every 300ms
+allocated 10 MiB
+allocated 20 MiB
+allocated 30 MiB
+allocated 40 MiB
+allocated 50 MiB
+echo "exit code: $?"
+exit code: 137
+docker inspect lab-mem --format 'OOMKilled={{.State.OOMKilled}}'
+OOMKilled=true
+PASS lab-cpu was throttled in 155 periods
+PASS and it's still running: CPU limits never kill
+PASS lab-mem was OOM-killed
+PASS with exit code 137 (SIGKILL)

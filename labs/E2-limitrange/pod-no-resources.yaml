@@ -1,0 +1,13 @@
+# No resources section. The LimitRange fills one in.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lr-defaults
+  namespace: lab-limits
+  annotations:
+    what: "Just sleeps. Has no resources: section, so the LimitRange fills one in."
+spec:
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]

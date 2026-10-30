@@ -1,0 +1,18 @@
+# Keeps allocating memory it never frees, well past its 64Mi limit.
+# restartPolicy Always: Kubernetes keeps restarting it after each OOM kill.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: memory-hog
+  annotations:
+    what: "Grabs 10 MiB every 0.3 s and never frees it, against a 64Mi limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  restartPolicy: Always
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["alloc", "--mib", "10", "--every", "300ms"]
+      resources:
+        requests: {cpu: 50m, memory: 32Mi}
+        limits:   {cpu: 500m, memory: 64Mi}

@@ -1,0 +1,45 @@
+# One pod per QoS class. The class comes only from requests and limits.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qos-guaranteed
+  annotations:
+    what: "Just sleeps. Requests equal limits for CPU and memory, so it's Guaranteed."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 100m, memory: 64Mi}
+        limits:   {cpu: 100m, memory: 64Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qos-burstable
+  annotations:
+    what: "Just sleeps. Has requests, but they don't equal its limits, so it's Burstable."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 50m, memory: 32Mi}
+        limits:   {memory: 64Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: qos-besteffort
+  annotations:
+    what: "Just sleeps. No requests or limits at all, so it's BestEffort."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]

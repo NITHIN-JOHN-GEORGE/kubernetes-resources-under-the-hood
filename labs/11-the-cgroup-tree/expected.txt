@@ -1,0 +1,123 @@
+kubectl apply -f labs/11-the-cgroup-tree/pods.yaml
+pod/qos-guaranteed created
+pod/qos-burstable created
+pod/qos-besteffort created
+kubectl wait --for=condition=Ready pod/qos-guaranteed pod/qos-burstable pod/qos-besteffort --timeout=120s
+pod/qos-guaranteed condition met
+pod/qos-burstable condition met
+pod/qos-besteffort condition met
+kubectl get pods -o custom-columns=NAME:.metadata.name,QOS:.status.qosClass
+NAME             QOS
+qos-besteffort   BestEffort
+qos-burstable    Burstable
+qos-guaranteed   Guaranteed
+docker exec under-the-hood-worker ls /sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/
+cgroup.controllers
+cgroup.events
+cgroup.freeze
+cgroup.kill
+cgroup.max.depth
+cgroup.max.descendants
+cgroup.pressure
+cgroup.procs
+cgroup.stat
+cgroup.subtree_control
+cgroup.threads
+cgroup.type
+cpu.idle
+cpu.max
+cpu.max.burst
+cpu.pressure
+cpu.stat
+cpu.stat.local
+cpu.weight
+cpu.weight.nice
+cpuset.cpus
+cpuset.cpus.effective
+cpuset.cpus.exclusive
+cpuset.cpus.exclusive.effective
+cpuset.cpus.partition
+cpuset.mems
+cpuset.mems.effective
+hugetlb.1GB.current
+hugetlb.1GB.events
+hugetlb.1GB.events.local
+hugetlb.1GB.max
+hugetlb.1GB.numa_stat
+hugetlb.1GB.rsvd.current
+hugetlb.1GB.rsvd.max
+hugetlb.2MB.current
+hugetlb.2MB.events
+hugetlb.2MB.events.local
+hugetlb.2MB.max
+hugetlb.2MB.numa_stat
+hugetlb.2MB.rsvd.current
+hugetlb.2MB.rsvd.max
+hugetlb.32MB.current
+hugetlb.32MB.events
+hugetlb.32MB.events.local
+hugetlb.32MB.max
+hugetlb.32MB.numa_stat
+hugetlb.32MB.rsvd.current
+hugetlb.32MB.rsvd.max
+hugetlb.64KB.current
+hugetlb.64KB.events
+hugetlb.64KB.events.local
+hugetlb.64KB.max
+hugetlb.64KB.numa_stat
+hugetlb.64KB.rsvd.current
+hugetlb.64KB.rsvd.max
+io.max
+io.pressure
+io.stat
+kubelet-kubepods-besteffort.slice
+kubelet-kubepods-burstable.slice
+kubelet-kubepods-pod58e938a3_af93_482c_b011_f0b3da15cd58.slice
+memory.current
+memory.events
+memory.events.local
+memory.high
+memory.low
+memory.max
+memory.min
+memory.oom.group
+memory.peak
+memory.pressure
+memory.reclaim
+memory.stat
+memory.swap.current
+memory.swap.events
+memory.swap.high
+memory.swap.max
+memory.swap.peak
+memory.zswap.current
+memory.zswap.max
+memory.zswap.writeback
+pids.current
+pids.events
+pids.events.local
+pids.max
+pids.peak
+rdma.current
+rdma.max
+docker exec under-the-hood-worker cat /sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/memory.max
+8321515520
+for p in qos-guaranteed qos-burstable qos-besteffort; do echo "$p: $(./scripts/pod-cgroup.sh $p | sed 's#.*kubelet-kubepods.slice/##')"; done
+./scripts/pod-cgroup.sh $p | sed 's#.*kubelet-kubepods.slice/##'
+qos-guaranteed: kubelet-kubepods-pod58e938a3_af93_482c_b011_f0b3da15cd58.slice
+./scripts/pod-cgroup.sh $p | sed 's#.*kubelet-kubepods.slice/##'
+qos-burstable: kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod5d53ce58_8956_4885_8c3d_c2070f884beb.slice
+./scripts/pod-cgroup.sh $p | sed 's#.*kubelet-kubepods.slice/##'
+qos-besteffort: kubelet-kubepods-besteffort.slice/kubelet-kubepods-besteffort-pod87fe6b31_7dec_4d9f_b7a9_c9e196bdea7d.slice
+for p in qos-guaranteed qos-burstable qos-besteffort; do echo "$p $(kubectl exec $p -- cat /proc/1/oom_score_adj)"; done
+kubectl exec $p -- cat /proc/1/oom_score_adj
+qos-guaranteed -997
+kubectl exec $p -- cat /proc/1/oom_score_adj
+qos-burstable 996
+kubectl exec $p -- cat /proc/1/oom_score_adj
+qos-besteffort 1000
+PASS qos-burstable sits in the burstable box
+PASS qos-besteffort sits in the besteffort box
+PASS qos-guaranteed sits directly under the box for all pods
+PASS Guaranteed: oom_score_adj -997
+PASS BestEffort: oom_score_adj 1000

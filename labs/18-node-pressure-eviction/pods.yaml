@@ -1,0 +1,48 @@
+# Three pods. Only memory-hog uses a lot of memory, and it has no requests (BestEffort).
+# Needs the pressure profile: make cluster PROFILE=pressure
+apiVersion: v1
+kind: Pod
+metadata:
+  name: memory-hog
+  annotations:
+    what: "Keeps allocating memory with no request or limit (BestEffort)."
+spec:
+  terminationGracePeriodSeconds: 1
+  restartPolicy: Never
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["alloc", "--mib", "10", "--every", "200ms"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calm-burstable
+  annotations:
+    what: "Just sleeps, using far less memory than its 32Mi request."
+spec:
+  terminationGracePeriodSeconds: 1
+  restartPolicy: Never
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: calm-guaranteed
+  annotations:
+    what: "Just sleeps, with a 32Mi request and limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  restartPolicy: Never
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+        limits:   {cpu: 10m, memory: 32Mi}

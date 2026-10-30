@@ -1,0 +1,20 @@
+kubectl apply -f labs/19-metrics-and-psi/pods.yaml
+pod/psi-cpu created
+pod/psi-memory created
+kubectl wait --for=condition=Ready pod/psi-cpu pod/psi-memory --timeout=120s
+pod/psi-cpu condition met
+pod/psi-memory condition met
+sleep 30
+kubectl exec psi-cpu -- cat /sys/fs/cgroup/cpu.pressure
+some avg10=59.96 avg60=24.36 avg300=6.05 total=18884381
+full avg10=3.74 avg60=1.52 avg300=0.38 total=1359356
+kubectl exec psi-memory -- cat /sys/fs/cgroup/memory.pressure
+some avg10=6.35 avg60=2.42 avg300=0.59 total=1967529
+full avg10=6.35 avg60=2.42 avg300=0.59 total=1967529
+docker exec under-the-hood-worker cat /proc/pressure/cpu /proc/pressure/memory
+some avg10=61.70 avg60=36.17 avg300=20.59 total=8843826755
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+some avg10=0.97 avg60=0.39 avg300=0.10 total=526587
+full avg10=0.94 avg60=0.37 avg300=0.09 total=399546
+PASS psi-cpu: some avg10=59% (threads waiting for a CPU)
+PASS psi-memory: memory.pressure total=2010938 µs of waiting

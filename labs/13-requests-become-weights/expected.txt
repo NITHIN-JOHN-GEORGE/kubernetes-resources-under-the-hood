@@ -1,0 +1,32 @@
+kubectl apply -f labs/13-requests-become-weights/pods.yaml
+pod/weight-low created
+pod/weight-high created
+kubectl wait --for=condition=Ready pod/weight-low pod/weight-high --timeout=120s
+pod/weight-low condition met
+pod/weight-high condition met
+kubectl exec weight-low  -- cat /sys/fs/cgroup/cpu.weight
+17
+kubectl exec weight-high -- cat /sys/fs/cgroup/cpu.weight
+84
+l1=$(kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+h1=$(kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+sleep 10
+l2=$(kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+h2=$(kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+echo "weight-low: $(( (l2 - l1) / 10000 ))m   weight-high: $(( (h2 - h1) / 10000 ))m"
+weight-low: 1060m   weight-high: 9103m
+for p in weight-low weight-high; do echo "$p pod cgroup: $(docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $p)/cpu.weight)"; done
+docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $p)/cpu.weight
+./scripts/pod-cgroup.sh $p
+weight-low pod cgroup: 4
+docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $p)/cpu.weight
+./scripts/pod-cgroup.sh $p
+weight-high pod cgroup: 32
+PASS neither pod has a CPU limit
+PASS pod cgroup weights: weight-low 4, weight-high 32
+  weight-low 1073m, weight-high 8807m (each measured over 5 s)
+PASS weight-high got at least 4x the CPU

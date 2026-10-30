@@ -1,0 +1,28 @@
+kubectl apply -f labs/09-four-checkpoints/quota.yaml
+namespace/lab-checkpoints created
+resourcequota/tiny created
+sleep 2
+kubectl apply -f labs/09-four-checkpoints/pod-over-quota.yaml
+Error from server (Forbidden): error when creating "labs/09-four-checkpoints/pod-over-quota.yaml": pods "over-quota" is forbidden: exceeded quota: tiny, requested: requests.cpu=250m, used: requests.cpu=0, limited: requests.cpu=100m
+kubectl apply -f labs/09-four-checkpoints/pod-too-big.yaml
+pod/too-big created
+sleep 3
+kubectl get pod too-big
+NAME      READY   STATUS    RESTARTS   AGE
+too-big   0/1     Pending   0          3s
+kubectl get events --field-selector involvedObject.name=too-big -o custom-columns=REASON:.reason,MESSAGE:.message
+REASON             MESSAGE
+FailedScheduling   0/2 nodes are available: 1 Insufficient cpu, 1 node(s) had untolerated taint(s). preemption: 0/2 nodes are available: 2 Preemption is not helpful for scheduling.
+kubectl apply -f labs/09-four-checkpoints/pod-ok.yaml
+pod/pod-ok created
+kubectl wait --for=condition=Ready pod/pod-ok --timeout=120s
+pod/pod-ok condition met
+./scripts/pod-cgroup.sh pod-ok
+/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod75303ff0_1b03_41bd_8745_b75dd1457165.slice
+kubectl exec pod-ok -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+50000 100000
+134217728
+PASS namespace lab-checkpoints has its quota
+PASS over-quota was refused by the API server (it doesn't exist)
+PASS too-big is Pending: the scheduler found no room
+PASS pod-ok reached the kernel: cpu.max is 50000 100000

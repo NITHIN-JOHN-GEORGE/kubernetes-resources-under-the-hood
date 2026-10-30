@@ -4,21 +4,21 @@
 
 ### From YAML to cgroups
 
-A hands-on lab that shows what **requests, limits, QoS classes, priority classes and quotas** actually do inside the Linux kernel, on your own laptop.
+The hands-on lab for **[Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)**. One lab per chapter, run on your own laptop, reading the real kernel files.
 
 [![Run the lab](https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood/actions/workflows/lab.yml/badge.svg)](https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood/actions/workflows/lab.yml)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![cgroups v2](https://img.shields.io/badge/cgroups-v2-38E8C6?style=flat-square&logo=linux&logoColor=black)
 ![macOS | Windows](https://img.shields.io/badge/runs_on-macOS_%7C_Windows_WSL2-555?style=flat-square)
-![Modules](https://img.shields.io/badge/modules-17-7C8CFF?style=flat-square)
+![Labs](https://img.shields.io/badge/labs-21_+_3_extras-7C8CFF?style=flat-square)
 
-**[📖 Read the illustrated walkthrough](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)** &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Modules](#modules) &nbsp;·&nbsp; [Setup](#setup)
+[Quick start](#quick-start) · [The labs](#the-labs) · [Incidents](#incidents) · [Commands](#commands) · [Setup](#setup)
 
 </div>
 
 <br>
 
-Every `resources:` block you write ends up as a few numbers in files under `/sys/fs/cgroup` on a node. Kubernetes writes the numbers; the **Linux kernel** enforces them. This lab creates a local cluster, runs pods with specific settings, and **reads the real kernel files**, so you can watch CPU throttling, OOM kills, evictions and QoS decisions happen instead of taking them on trust.
+Every `resources:` block you write ends up as a few numbers in files under `/sys/fs/cgroup` on a node. Kubernetes writes the numbers; the **Linux kernel** enforces them. Each lab here asks one question, has you predict the answer, then shows it to you in the real files with `kubectl`, `docker` and `cat`.
 
 <p align="center">
   <picture>
@@ -32,122 +32,100 @@ Every `resources:` block you write ends up as a few numbers in files under `/sys
 ```bash
 git clone https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood.git
 cd kubernetes-resources-under-the-hood
-make cluster              # 2-node kind cluster inside Docker (about a minute)
-make 01-cgroups-by-hand   # start here, then go in order
+make check-setup                     # is Docker ready?
 ```
 
-Each module prints what it does, reads the kernel files, and ends with checks:
-
-```text
-  pod            periods          throttled      CPU used (millicores)
-  cpu-limited    250              249            200
-  cpu-unlimited  -                0              several thousand
-PASS cpu-limited was throttled in 249 periods
-PASS cpu-unlimited was never throttled
-```
-
-Before any measurement, a module tells you **what it started and why**: each pod carries a one-line `what` note, printed with its requests and limits.
-
-```text
-What's running:
-  cpu-limited: 4 busy loops that each want a whole CPU, squeezed into a 200m limit.
-    requests {"cpu":"100m","memory":"16Mi"}   limits {"cpu":"200m","memory":"32Mi"}
-```
-
-> [!TIP]
-> Learn by following a module's README step by step; use `make` to check your results or rerun quickly. Every module cleans up its own pods, even if a check fails or you press Ctrl-C. Run with `KEEP=1` to keep them and poke around.
-
-## Modules
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/img/yaml-files-dark.svg">
-    <img alt="Requests and limits in a pod spec become cpu.weight, cpu.max and memory.max files" src="docs/img/yaml-files-light.svg" width="720">
-  </picture>
-</p>
-
-#### 🧱 Part 1 · Cgroups from scratch
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `00` | [**cgroups v2 on a node**](modules/00-setup) | The node's cgroup tree, and the box that holds every pod |
-| `01` | [**Build a cgroup by hand**](modules/01-cgroups-by-hand) | `mkdir`, `cpu.max`, `cgroup.procs`: throttle a process and OOM-kill another, with no Kubernetes |
-| `02` | [**Follow one pod down**](modules/02-follow-the-pod) | The same numbers at every layer: pod spec → runtime spec → systemd scope → cgroup files |
-| `03` | [**Requests and limits**](modules/03-requests-and-limits) | Which line of YAML becomes which file |
-
-#### ⚙️ Part 2 · CPU
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `04` | [**CPU weight**](modules/04-cpu-weight) | Contended CPU split by request, and the old vs new shares-to-weight formula |
-| `05` | [**CPU throttling**](modules/05-cpu-throttling) | `nr_throttled` climbing under a limit while the node is idle |
-
-#### 🧠 Part 3 · Memory
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `06` | [**Memory limits and OOM kills**](modules/06-memory-and-oom) | `OOMKilled`, exit code 137, `oom_kill` in `memory.events` |
-| `07` | [**Memory, properly**](modules/07-memory-deep-dive) | File cache reclaimed without harm, anonymous memory OOM-killed, the working set |
-
-#### 🖥️ Part 4 · The whole node
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `08` | [**QoS classes**](modules/08-qos-classes) | Guaranteed, Burstable, BestEffort slices and `oom_score_adj` |
-| `09` | [**Node allocatable**](modules/09-node-allocatable) | Capacity vs allocatable, and a pod stuck on `Insufficient memory` |
-| `10` | [**Node-pressure eviction**](modules/10-node-pressure-eviction) | The kubelet evicting a BestEffort hog under `MemoryPressure` ¹ |
-
-#### 🔭 Part 5 · Observe, limit and adjust
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `11` | [**Pressure stall information**](modules/11-psi) | `cpu.pressure`, `memory.pressure`, `io.pressure` |
-| `12` | [**PIDs and ephemeral storage**](modules/12-pids-and-ephemeral-storage) | `pids.max`, refused forks, eviction for disk use ¹ |
-| `13` | [**In-place resize**](modules/13-in-place-resize) | `cpu.max` and `memory.max` changing with no restart (1.33+) |
-
-#### 🛡️ Extras · Kubernetes policy (no cgroups involved)
-
-| | Module | What you'll see |
-|:-:|---|---|
-| `14` | [**ResourceQuota**](modules/14-resourcequota) | `must specify` and `exceeded quota` at admission |
-| `15` | [**LimitRange**](modules/15-limitrange) | Injected defaults landing in `cpu.max` and `memory.max` |
-| `16` | [**Priority and preemption**](modules/16-priority-preemption) | A high-priority pod pushing a low-priority one off the node |
-
-<sub>¹ Temporarily changes the worker's kubelet config and always restores it on exit.</sub>
-
-**Each module folder has a hands-on README.** You type the commands yourself, one step at a time, and each step shows what you should see and explains it in plain English, including the Linux files involved (`cpu.max`, `memory.max`, `cpu.stat`, `memory.events`, `/proc/<pid>/oom_score_adj` and more). The `make` target runs the same steps in one go and checks the results.
-
-## Watch it live
-
-Open a second terminal while a module runs (with `KEEP=1`) and watch the kernel's numbers move once a second. Each line names the file it came from.
+Then open **[labs/01-processes-and-threads](labs/01-processes-and-threads/)** and follow its README. Labs 01–07 need only Docker. From lab 08 on you need the cluster:
 
 ```bash
-KEEP=1 make 05-cpu-throttling        # terminal 1
-make watch POD=cpu-limited           # terminal 2
+make cluster                         # 2-node kind cluster + the lab-tools image (about 2 minutes)
 ```
 
-```text
-watching cpu-limited   (Ctrl-C to stop)
+Every lab works the same way:
 
-CPU
-  limit        200m                             (cpu.max: 20000 100000)
-  used         200m in the last second          (cpu.stat: usage_usec)
-  throttled    10 of 10 periods in the last second   (cpu.stat: nr_throttled / nr_periods)
-
-MEMORY ...   PRESSURE ...
+```bash
+kubectl apply -f labs/14-limits-and-throttling/          # set it up (the README says so)
+kubectl exec cpu-limited -- cat /sys/fs/cgroup/cpu.stat  # follow the steps by hand
+make check LAB=14                                        # PASS/FAIL on what you just built (read-only)
+kubectl delete -f labs/14-limits-and-throttling/         # done; on to lab 15
 ```
 
-`./scripts/watch.sh --cgroup /sys/fs/cgroup/lab-cpu` watches any cgroup on the node, like the ones you build by hand in module 01.
+Nothing is deleted behind your back: pods stay until you delete them or run `make reset`.
 
-## Incidents: debug it yourself
+## The labs
 
-Once you've done the modules, try the [**incidents**](incidents): a broken pod, a ticket that sounds like a real page, and no instructions. You dig through the cgroup files yourself.
+Each lab README follows the same rhythm: **question → predict → steps → what happened → one line to remember**, and links to its chapter of the blog.
+
+#### Part 1 · Foundations (Docker only)
+
+| Lab | You'll see |
+|---|---|
+| [01 · Processes and threads](labs/01-processes-and-threads/) | PIDs, threads in `/proc/<pid>/task`, `nproc` |
+| [02 · Everything is a file](labs/02-everything-is-a-file/) | A 0-byte `/proc/meminfo` that still has content |
+| [03 · /proc](labs/03-proc/) | `/proc/self/status`, `/proc/self/cgroup` |
+| [04 · /sys and /sys/fs/cgroup](labs/04-sys-and-sys-fs-cgroup/) | `cgroup2`, mounted read-only |
+| [05 · cpu.max and cpu.weight](labs/05-cpu-max-and-cpu-weight/) | `--cpus=0.5 --memory=128m` as `50000 100000` and `134217728` |
+| [06 · CPU waits, memory kills](labs/06-cpu-waits-memory-kills/) | `nr_throttled` climbing vs exit code 137 |
+| [07 · What a container is](labs/07-what-is-a-container/) | PID 1 inside, a long cgroup path outside |
+
+#### Part 2 · By hand
+
+| Lab | You'll see |
+|---|---|
+| [08 · Build a cgroup by hand](labs/08-build-a-cgroup-by-hand/) | `mkdir`, `echo`, `cgroup.procs`: throttle a loop, OOM-kill a process |
+
+#### Part 3 · From YAML to kernel
+
+| Lab | You'll see |
+|---|---|
+| [09 · The four checkpoints](labs/09-four-checkpoints/) | A pod stopped by the API server, one by the scheduler, one reaching the kernel |
+| [10 · Follow one pod down](labs/10-follow-one-pod-down/) | The same numbers in the OCI spec, systemd and the cgroup files |
+| [11 · The cgroup tree](labs/11-the-cgroup-tree/) | kubepods → QoS box → pod → container, and `oom_score_adj` |
+
+#### Part 4 · CPU
+
+| Lab | You'll see |
+|---|---|
+| [12 · How Linux shares a CPU](labs/12-how-linux-shares-a-cpu/) | An even split under contention |
+| [13 · Requests become weights](labs/13-requests-become-weights/) | Container vs **pod** `cpu.weight`, and the 8× split |
+| [14 · Limits and throttling](labs/14-limits-and-throttling/) | Throttled in nearly every 100 ms period |
+| [15 · The outage](labs/15-the-outage/) | Bursts → throttling → probe timeouts → restarts |
+
+#### Part 5 · Memory
+
+| Lab | You'll see |
+|---|---|
+| [16 · Memory limits and OOM](labs/16-memory-limits-and-oom/) | `OOMKilled`, 137, `memory.events` |
+| [17 · Not all memory is equal](labs/17-not-all-memory-is-equal/) | File cache reclaimed, anon killed, working set, `memory.peak` |
+| [18 · Node pressure eviction](labs/18-node-pressure-eviction/) ¹ | Allocatable, `MemoryPressure`, the hog `Evicted` |
+
+#### Part 6 · In production
+
+| Lab | You'll see |
+|---|---|
+| [19 · Metrics and PSI](labs/19-metrics-and-psi/) | File → metric, `cpu.pressure`, `memory.pressure` |
+| [20 · PIDs and disk](labs/20-pids-and-disk/) ² | `pids.max 64`, refused forks, an ephemeral-storage eviction |
+| [21 · In-place resize](labs/21-in-place-resize/) | `cpu.max` 20000 → 50000, restarts=0 |
+
+#### Extras · Kubernetes policy (no cgroups involved)
+
+| Lab | You'll see |
+|---|---|
+| [E1 · ResourceQuota](labs/E1-resourcequota/) | `must specify`, `exceeded quota` |
+| [E2 · LimitRange](labs/E2-limitrange/) | Injected defaults landing in `cpu.max` and `memory.max` |
+| [E3 · Priority and preemption](labs/E3-priority-and-preemption/) | A high-priority pod pushing a low-priority one off the node |
+
+<sub>¹ Needs `make cluster PROFILE=pressure`. ² Needs `make cluster PROFILE=pids`. A profile is a different kubelet setting, set when the cluster is created; nothing is edited live. Switch with `make clean && make cluster PROFILE=…`.</sub>
+
+## Incidents
+
+Once you've done the labs, try the [**incidents**](incidents/): something is broken, there's a ticket that reads like a real page, and no instructions.
 
 | # | Ticket |
 |:-:|---|
-| `1` | "Checkout is slow, but the CPU graph is under its limit" |
-| `2` | "OOMKilled, but the dashboard never went above half" |
-| `3` | "Pending for ages, the node's memory is almost empty" |
+| 1 | "Checkout is slow, but the CPU graph is under its limit" |
+| 3 | "OOMKilled, but the dashboard never went above half" |
+| 4 | "Pending for ages, the node's memory is almost empty" |
 
 ```bash
 make incident-1                  # start it and read the ticket
@@ -155,18 +133,34 @@ make hint-1                      # stuck?
 make answer-1 CAUSE=<answer>     # checks you, explains, shows the fix
 ```
 
+## Commands
+
+`make` is only for the environment and for checks. The lessons themselves are plain `kubectl`, `docker` and `cat`.
+
+| Command | What it does |
+|---|---|
+| `make check-setup` | Docker, tools, cluster, cgroups v2, and leftovers from earlier labs, with a fix for each ✗ |
+| `make image` | Build the `lab-tools` image (`burn`, `alloc`, `cache`, `forkmany`, `serve`, `load`) |
+| `make cluster` | Create the cluster and load `lab-tools` (`PROFILE=pressure` or `pids` for labs 18 and 20) |
+| `make check LAB=14` | Read-only PASS/FAIL on what you built in a lab |
+| `make test LAB=14` | Run a lab's README steps for you, end to end, and save the output to `expected.txt` |
+| `make reset` | Remove everything the labs created; keep the cluster |
+| `make clean` | Delete the cluster |
+
+Two helpers you'll use in the labs:
+
+- `./scripts/pod-cgroup.sh <pod>` prints a pod's cgroup folder on the node.
+- `./scripts/watch.sh <pod>` is a live, once-a-second view of a pod's cgroup files, each line naming the file it came from.
+
 ## Setup
 
-You need **Docker Desktop**, **kind** and **kubectl**. Give Docker at least **4 CPUs and 6 GB of memory** (Docker Desktop → Settings → Resources).
+You need **Docker Desktop**, **kind** and **kubectl** (1.32 or newer). Give Docker at least **4 CPUs and 6 GB of memory** (Docker Desktop → Settings → Resources).
 
 <details open>
 <summary><b>macOS</b></summary>
 
 ```bash
 brew install kind kubectl
-git clone https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood.git
-cd kubernetes-resources-under-the-hood
-make cluster
 ```
 
 </details>
@@ -191,38 +185,17 @@ Run everything inside an Ubuntu WSL2 terminal. Docker Desktop must use the WSL2 
    sudo apt-get update && sudo apt-get install -y make
    curl -Lo kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x kind && sudo mv kind /usr/local/bin/
    curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-   git clone https://github.com/NITHIN-JOHN-GEORGE/kubernetes-resources-under-the-hood.git
-   cd kubernetes-resources-under-the-hood
-   make cluster
    ```
 
 </details>
 
-Then run `make 00-setup`. If it reports that the node isn't on cgroups v2, follow the hint it prints.
-
-## Commands
-
-| Command | What it does |
-|---|---|
-| `make help` | List every target |
-| `make <module>` | Run one module, e.g. `make 06-memory-and-oom` |
-| `make all` | Run every module in order |
-| `KEEP=1 make <module>` | Keep the module's pods so you can explore |
-| `make watch POD=<pod>` | Live view of a pod's cgroup files |
-| `make incident-N` / `hint-N` / `answer-N CAUSE=...` | Debugging challenges; `make incident-clean` removes them |
-| `make reset` | Keep the cluster; remove everything the lab created and undo any kubelet change |
-| `make clean` | Delete the whole kind cluster (`make cluster` to start again) |
-
-## How it reads kernel files
-
-- **From inside a container:** with cgroups v2 each container sees its own cgroup at `/sys/fs/cgroup`, so `kubectl exec <pod> -- cat /sys/fs/cgroup/cpu.max` shows that container's limit.
-- **From the node:** a kind node is a Docker container, so `docker exec under-the-hood-worker cat /sys/fs/cgroup/...` reads the pod and QoS slices directly. kind runs the kubelet with `cgroupRoot: /kubelet`, so the pod tree lives under `kubelet.slice/kubelet-kubepods.slice`.
+Then run `make check-setup`. Every ✗ comes with the fix.
 
 ## Further reading
 
-- 📖 [Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/): the beginner-friendly, illustrated walkthrough of every module
-- [Kubernetes docs: Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+- [The blog post](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/), which this lab follows chapter by chapter
 - [Linux kernel docs: Control Group v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
+- [Kubernetes docs: Resource management for pods and containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 
 ## License
 

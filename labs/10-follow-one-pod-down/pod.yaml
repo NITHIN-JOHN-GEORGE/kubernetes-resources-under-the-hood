@@ -1,0 +1,16 @@
+# The same resources as the YAML at the top of the blog post.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: follow-me
+  annotations:
+    what: "Just sleeps. We only look at the cgroup it lives in, layer by layer."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 250m, memory: 64Mi}
+        limits:   {cpu: 500m, memory: 128Mi}

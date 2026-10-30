@@ -1,0 +1,14 @@
+# A namespace with a tiny budget: pods in it may request at most 100m CPU in total.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-checkpoints
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tiny
+  namespace: lab-checkpoints
+spec:
+  hard:
+    requests.cpu: 100m

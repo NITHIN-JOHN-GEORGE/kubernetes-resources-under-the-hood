@@ -1,0 +1,47 @@
+kubectl apply -f labs/E3-priority-and-preemption/priorityclasses.yaml
+priorityclass.scheduling.k8s.io/lab-low created
+priorityclass.scheduling.k8s.io/lab-high created
+kubectl get priorityclass
+NAME                      VALUE        GLOBAL-DEFAULT   AGE   PREEMPTIONPOLICY
+lab-high                  1000000      false            0s    PreemptLowerPriority
+lab-low                   1000         false            0s    PreemptLowerPriority
+system-cluster-critical   2000000000   false            65m   PreemptLowerPriority
+system-node-critical      2000001000   false            65m   PreemptLowerPriority
+CPU=$(( $(./scripts/node-free.sh cpu) - 200 ))m
+./scripts/node-free.sh cpu
+echo "each pod requests $CPU"
+each pod requests 9700m
+sed "s/__CPU__/$CPU/" labs/E3-priority-and-preemption/pod-low.yaml | kubectl apply -f -
+pod/prio-low created
+kubectl wait --for=condition=Ready pod/prio-low --timeout=120s
+pod/prio-low condition met
+sed "s/__CPU__/$CPU/" labs/E3-priority-and-preemption/pod-high.yaml | kubectl apply -f -
+pod/prio-high created
+kubectl wait --for=condition=Ready pod/prio-high --timeout=120s
+pod/prio-high condition met
+kubectl get pods prio-low prio-high
+NAME        READY   STATUS    RESTARTS   AGE
+prio-low    0/1     Error     0          3s
+prio-high   1/1     Running   0          3s
+kubectl get events --field-selector involvedObject.name=prio-low -o custom-columns=REASON:.reason,MESSAGE:.message
+REASON      MESSAGE
+Scheduled   Successfully assigned lab/prio-low to under-the-hood-worker
+Pulled      Container image "lab-tools:1.0" already present on machine and can be accessed by the pod
+Created     Container created
+Started     Container started
+Preempted   Preempted by pod 408b903e-2bfb-4d76-b5bd-077de8895b6c on node under-the-hood-worker
+Killing     Stopping container main
+Scheduled   Successfully assigned lab/prio-low to under-the-hood-worker
+Pulled      Container image "lab-tools:1.0" already present on machine and can be accessed by the pod
+Created     Container created
+Started     Container started
+Preempted   Preempted by pod 50f36478-7487-4d87-ad2d-77ad78857637 on node under-the-hood-worker
+Killing     Stopping container main
+Scheduled   Successfully assigned lab/prio-low to under-the-hood-worker
+Pulled      Container image "lab-tools:1.0" already present on machine and can be accessed by the pod
+Created     Container created
+Started     Container started
+Preempted   Preempted by pod 0c1c7764-e7af-4abc-a623-643b83884308 on node under-the-hood-worker
+Killing     Stopping container main
+PASS prio-high is running
+PASS prio-low was preempted to make room

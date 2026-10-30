@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""load --url http://serve --burst 20 --every 1s
+Every --every seconds, sends --burst requests at the same moment, on a fixed schedule:
+a new burst starts on time even if the last one hasn't finished, like real traffic.
+The same average volume as a steady stream, but bursty, like retries, fan-out or
+cron jobs hitting a service together."""
+import argparse, threading, time, urllib.request
+from concurrent.futures import ThreadPoolExecutor
+p = argparse.ArgumentParser()
+p.add_argument("--url", required=True)
+p.add_argument("--burst", type=int, default=20)
+p.add_argument("--every", default="1s")
+a = p.parse_args()
+pause = float(a.every[:-2]) / 1000 if a.every.endswith("ms") else float(a.every.rstrip("s"))
+
+def hit(_):
+    t = time.monotonic()
+    try:
+        urllib.request.urlopen(a.url, timeout=10).read()
+        return (time.monotonic() - t) * 1000
+    except Exception:
+        return None
+
+def burst():
+    with ThreadPoolExecutor(a.burst) as ex:
+        res = list(ex.map(hit, range(a.burst)))
+    ok = sorted(r for r in res if r is not None)
+    slowest = f"{ok[-1]:.0f} ms" if ok else "-"
+    print(f"burst of {a.burst}: {len(ok)} ok, {a.burst - len(ok)} failed, slowest {slowest}", flush=True)
+
+next_t = time.monotonic()
+while True:
+    threading.Thread(target=burst, daemon=True).start()
+    next_t += pause
+    time.sleep(max(0, next_t - time.monotonic()))

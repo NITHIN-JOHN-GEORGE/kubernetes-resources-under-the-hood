@@ -1,0 +1,21 @@
+docker run -d --name lab-box  lab-tools:1.0 sleep infinity
+cfa4149e3fda3979555b77b57ec634ebfc80fae9877b8bdb57309a7f786b11fe
+docker run -d --name lab-box2 lab-tools:1.0 sleep infinity
+ef3a942ff73a90d7da6dfe9e21a804f633082a60c529374249b887db75395ddd
+docker exec lab-box  cat /proc/1/comm /proc/self/cgroup
+sleep
+0::/
+docker exec lab-box2 cat /proc/1/comm /proc/self/cgroup
+sleep
+0::/
+PID=$(docker inspect lab-box --format '{{.State.Pid}}')
+docker inspect lab-box --format '{{.State.Pid}}'
+echo "lab-box's sleep is PID $PID on the Docker host"
+lab-box's sleep is PID 19716 on the Docker host
+docker run --rm --pid=host --cgroupns=host lab-tools:1.0 cat /proc/$PID/comm /proc/$PID/cgroup
+sleep
+0::/docker/cfa4149e3fda3979555b77b57ec634ebfc80fae9877b8bdb57309a7f786b11fe
+PASS in lab-box, PID 1 is sleep
+PASS in lab-box2, PID 1 is sleep
+PASS outside, lab-box's sleep is PID 19716
+PASS and its cgroup path is /docker/cfa4149e3fda3979555b77b57ec634ebfc80fae9877b8bdb57309a7f786b11fe

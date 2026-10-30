@@ -1,0 +1,13 @@
+# No resources at all. A quota on requests makes them mandatory, so this is rejected.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: q-no-requests
+  namespace: lab-quota
+  annotations:
+    what: "Just sleeps. Has no requests, so the namespace quota should reject it."
+spec:
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]

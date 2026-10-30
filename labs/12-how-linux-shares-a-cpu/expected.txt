@@ -1,0 +1,26 @@
+kubectl apply -f labs/12-how-linux-shares-a-cpu/pods.yaml
+pod/share-a created
+pod/share-b created
+kubectl wait --for=condition=Ready pod/share-a pod/share-b --timeout=120s
+pod/share-a condition met
+pod/share-b condition met
+kubectl exec share-a -- cat /sys/fs/cgroup/cpu.weight /sys/fs/cgroup/cpu.max
+35
+max 100000
+kubectl exec share-b -- cat /sys/fs/cgroup/cpu.weight /sys/fs/cgroup/cpu.max
+35
+max 100000
+a1=$(kubectl exec share-a -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec share-a -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+b1=$(kubectl exec share-b -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec share-b -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+sleep 10
+a2=$(kubectl exec share-a -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec share-a -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+b2=$(kubectl exec share-b -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+kubectl exec share-b -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat
+echo "share-a: $(( (a2 - a1) / 10000 ))m   share-b: $(( (b2 - b1) / 10000 ))m"
+share-a: 5103m   share-b: 5030m
+PASS both pods have the same cpu.weight
+  share-a 5011m, share-b 5016m (each measured over 5 s)
+PASS they split the CPU roughly evenly

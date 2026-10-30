@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""alloc --mib 10 --every 300ms [--max 1000]
+Allocates anonymous memory in steps and never frees it. Every byte is written,
+so the kernel really has to back it with RAM (it counts as `anon`)."""
+import argparse, time
+p = argparse.ArgumentParser()
+p.add_argument("--mib", type=int, default=10, help="MiB per step")
+p.add_argument("--every", default="300ms", help="pause between steps, e.g. 300ms or 1s")
+p.add_argument("--max", type=int, default=0, help="stop growing at this many MiB (0 = never stop)")
+a = p.parse_args()
+pause = float(a.every[:-2]) / 1000 if a.every.endswith("ms") else float(a.every.rstrip("s"))
+held, total = [], 0
+while a.max == 0 or total < a.max:
+    held.append(b"\x01" * (a.mib * 1024 * 1024))
+    total += a.mib
+    print(f"allocated {total} MiB", flush=True)
+    time.sleep(pause)
+print(f"holding {total} MiB", flush=True)
+while True:
+    time.sleep(3600)

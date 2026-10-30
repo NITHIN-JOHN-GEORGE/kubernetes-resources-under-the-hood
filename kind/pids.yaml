@@ -1,0 +1,16 @@
+# Profile "pids": every pod may have at most 64 processes and threads (pids.max = 64).
+# Used by lab 20.
+# Kubernetes version pinned so every reader runs what the labs were tested on (kind v0.33.0).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: under-the-hood
+kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    podPidsLimit: 64
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    labels: {lab-profile: pids}

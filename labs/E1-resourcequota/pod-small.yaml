@@ -1,0 +1,16 @@
+# Fits inside the quota.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: q-small
+  namespace: lab-quota
+  annotations:
+    what: "Just sleeps. Requests 200m CPU, which fits the 500m quota."
+spec:
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 200m, memory: 100Mi}
+        limits:   {memory: 128Mi}

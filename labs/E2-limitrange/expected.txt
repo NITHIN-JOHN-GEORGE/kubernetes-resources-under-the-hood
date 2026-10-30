@@ -1,0 +1,24 @@
+kubectl apply -f labs/E2-limitrange/limitrange.yaml
+namespace/lab-limits created
+limitrange/container-defaults created
+kubectl -n lab-limits describe limitrange container-defaults
+Name:       container-defaults
+Namespace:  lab-limits
+Type        Resource  Min   Max    Default Request  Default Limit  Max Limit/Request Ratio
+----        --------  ---   ---    ---------------  -------------  -----------------------
+Container   cpu       -     -      100m             200m           -
+Container   memory    32Mi  256Mi  64Mi             128Mi          -
+kubectl apply -f labs/E2-limitrange/pod-no-resources.yaml
+pod/lr-defaults created
+kubectl -n lab-limits wait --for=condition=Ready pod/lr-defaults --timeout=120s
+pod/lr-defaults condition met
+kubectl -n lab-limits get pod lr-defaults -o jsonpath='{.spec.containers[0].resources}{"\n"}'
+{"limits":{"cpu":"200m","memory":"128Mi"},"requests":{"cpu":"100m","memory":"64Mi"}}
+kubectl -n lab-limits exec lr-defaults -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+20000 100000
+134217728
+kubectl apply -f labs/E2-limitrange/pod-too-big.yaml
+Error from server (Forbidden): error when creating "labs/E2-limitrange/pod-too-big.yaml": pods "lr-too-big" is forbidden: maximum memory usage per Container is 256Mi, but limit is 512Mi
+PASS the injected 200m default became cpu.max 20000 100000
+PASS the injected 128Mi default became memory.max 134217728
+PASS the pod over the maximum was refused

@@ -1,0 +1,18 @@
+# A bursty client: 12 requests at the same moment, every 2 seconds on the dot, forever.
+# That's 6 requests a second on average. 3 pods at 500m can do about 9 a second
+# (160 ms of CPU each), so on average there's room. But each burst arrives all at once.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load
+  annotations:
+    what: "Sends bursts of 12 requests at once every 2 seconds to the serve Service."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["load", "--url", "http://serve/", "--burst", "12", "--every", "2s"]
+      resources:
+        requests: {cpu: 50m, memory: 32Mi}
+        limits:   {memory: 64Mi}

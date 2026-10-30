@@ -1,0 +1,37 @@
+kubectl apply -f labs/14-limits-and-throttling/pods.yaml
+pod/cpu-limited created
+pod/cpu-unlimited created
+kubectl wait --for=condition=Ready pod/cpu-limited pod/cpu-unlimited --timeout=120s
+pod/cpu-limited condition met
+pod/cpu-unlimited condition met
+kubectl exec cpu-limited   -- cat /sys/fs/cgroup/cpu.max
+20000 100000
+kubectl exec cpu-unlimited -- cat /sys/fs/cgroup/cpu.max
+max 100000
+kubectl exec cpu-limited -- cat /sys/fs/cgroup/cpu.stat
+usage_usec 388505
+user_usec 377331
+system_usec 11173
+nice_usec 0
+nr_periods 19
+nr_throttled 19
+throttled_usec 4106351
+nr_bursts 0
+burst_usec 0
+sleep 10
+kubectl exec cpu-limited -- cat /sys/fs/cgroup/cpu.stat
+usage_usec 2522439
+user_usec 2502000
+system_usec 20438
+nice_usec 0
+nr_periods 126
+nr_throttled 126
+throttled_usec 22359875
+nr_bursts 0
+burst_usec 0
+kubectl exec cpu-unlimited -- grep nr_throttled /sys/fs/cgroup/cpu.stat
+nr_throttled 0
+PASS cpu-limited's cpu.max is 20000 100000
+PASS throttled in 65 of 65 periods
+PASS held to about 200m (201m)
+PASS cpu-unlimited was never throttled

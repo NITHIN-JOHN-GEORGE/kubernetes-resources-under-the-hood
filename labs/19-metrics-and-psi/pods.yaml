@@ -1,0 +1,33 @@
+# psi-cpu: always more runnable threads than CPUs, so they wait (cpu.pressure).
+# psi-memory: rereads a file bigger than its limit, so the kernel keeps reclaiming (memory.pressure).
+apiVersion: v1
+kind: Pod
+metadata:
+  name: psi-cpu
+  annotations:
+    what: "Twice as many busy loops as the node has CPUs, so its threads always queue for a CPU."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sh", "-c", "exec burn --threads $(( $(nproc) * 2 ))"]
+      resources:
+        requests: {cpu: 100m, memory: 16Mi}
+        limits:   {memory: 64Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: psi-memory
+  annotations:
+    what: "Rereads a 192 MiB file inside a 64Mi limit, so the kernel keeps reclaiming cache."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["cache", "--mib", "192", "--loop"]
+      resources:
+        requests: {cpu: 200m, memory: 64Mi}
+        limits:   {cpu: 500m, memory: 64Mi}

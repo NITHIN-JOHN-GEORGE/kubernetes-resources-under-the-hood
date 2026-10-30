@@ -1,0 +1,65 @@
+make image
+docker build -t lab-tools:1.0 image/
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 326B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.12-alpine
+#2 DONE 2.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/4] FROM docker.io/library/python:3.12-alpine@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8
+#4 resolve docker.io/library/python:3.12-alpine@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8 done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 214B done
+#5 DONE 0.0s
+
+#6 [3/4] COPY tools/ /usr/local/bin/
+#6 CACHED
+
+#7 [2/4] RUN apk add --no-cache procps coreutils
+#7 CACHED
+
+#8 [4/4] RUN chmod +x /usr/local/bin/*
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:244a8cfd558b62fc0f101c5e998e6f7355d1195388a3f0cfb9eedc680300973a done
+#9 exporting config sha256:46f54f606ac4dfb205a8c7e9549bb699ba8490acd4e50f21b816deda0ea02e2a done
+#9 exporting attestation manifest sha256:b1fc8ab7930f5d9d729e395e8f660b303c71efbf24e0a8f7ad8ed1408cd2daec done
+#9 exporting manifest list sha256:bdce1fabfc4aaf97e251c79a1b63362dc25b4fd89cccc3cdb31856b2db644230 done
+#9 naming to docker.io/library/lab-tools:1.0 done
+#9 unpacking to docker.io/library/lab-tools:1.0 done
+#9 DONE 0.0s
+docker run -d --name lab-box lab-tools:1.0 serve --workers 4
+1bb0ca9ef3e63d20ae4b118930a1ecc37f389a571a8b5dcd842ce594b0ff9941
+sleep 2
+docker exec lab-box ps -eLo pid,lwp,nlwp,comm
+    PID     LWP NLWP COMMAND
+      1       1    4 python3
+      1      11    4 python3
+      1      12    4 python3
+      1      13    4 python3
+      7       7    1 python3
+      8       8    1 python3
+      9       9    1 python3
+     10      10    1 python3
+     14      14    1 ps
+docker exec lab-box ls /proc/1/task
+1
+11
+12
+13
+docker exec lab-box nproc
+10
+PASS lab-box runs 8 processes (serve + 4 workers, and ps itself)
+PASS there are more threads (11) than processes: some processes have several
+PASS /proc/1/task lists 4 thread(s) for PID 1

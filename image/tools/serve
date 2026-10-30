@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""serve --work-ms 40 --workers 4 [--threads 8] [--port 8080]
+A small HTTP service. Each request to / burns --work-ms of CPU in each of --workers
+processes at the same time (like a request that fans work out to a thread pool).
+Requests are handled by --threads request threads, like most web servers. GET /healthz
+needs almost no CPU, but it waits for a free request thread like any other request,
+and it runs inside the same cgroup, so when the container is throttled it waits too."""
+import argparse, time, os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Pool
+p = argparse.ArgumentParser()
+p.add_argument("--work-ms", type=int, default=40)
+p.add_argument("--workers", type=int, default=4)
+p.add_argument("--threads", type=int, default=8, help="request threads")
+p.add_argument("--port", type=int, default=8080)
+a = p.parse_args()
+
+def burn(ms):
+    end = time.process_time() + ms / 1000
+    while time.process_time() < end:
+        pass
+    return ms
+
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/healthz":
+            body = b"ok\n"
+        else:
+            t = time.monotonic()
+            pool.map(burn, [a.work_ms] * a.workers)
+            ms = (time.monotonic() - t) * 1000
+            print(f"request: {ms:.0f} ms (CPU needed: {a.work_ms * a.workers} ms)", flush=True)
+            body = f"{ms:.0f} ms\n".encode()
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *args):
+        pass
+
+class Server(HTTPServer):
+    """An HTTP server with a fixed number of request threads. Extra requests queue."""
+    request_queue_size = 128
+    def process_request(self, request, client_address):
+        threads.submit(self._handle, request, client_address)
+    def _handle(self, request, client_address):
+        try:
+            self.finish_request(request, client_address)
+        finally:
+            self.shutdown_request(request)
+
+if __name__ == "__main__":
+    pool = Pool(a.workers)
+    threads = ThreadPoolExecutor(a.threads)
+    print(f"serve: listening on :{a.port}, {a.threads} request threads, "
+          f"{a.workers} workers x {a.work_ms} ms CPU per request", flush=True)
+    Server(("", a.port), H).serve_forever()

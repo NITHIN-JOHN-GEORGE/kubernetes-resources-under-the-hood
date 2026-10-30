@@ -1,0 +1,31 @@
+kubectl apply -f labs/E1-resourcequota/quota.yaml
+namespace/lab-quota created
+resourcequota/compute created
+sleep 2
+kubectl -n lab-quota describe quota compute
+Name:            compute
+Namespace:       lab-quota
+Resource         Used  Hard
+--------         ----  ----
+limits.memory    0     512Mi
+pods             0     3
+requests.cpu     0     500m
+requests.memory  0     256Mi
+kubectl apply -f labs/E1-resourcequota/pod-no-requests.yaml
+Error from server (Forbidden): error when creating "labs/E1-resourcequota/pod-no-requests.yaml": pods "q-no-requests" is forbidden: failed quota: compute: must specify limits.memory for: main; requests.cpu for: main; requests.memory for: main
+kubectl apply -f labs/E1-resourcequota/pod-small.yaml
+pod/q-small created
+kubectl apply -f labs/E1-resourcequota/pod-big.yaml
+Error from server (Forbidden): error when creating "labs/E1-resourcequota/pod-big.yaml": pods "q-big" is forbidden: exceeded quota: compute, requested: requests.cpu=400m, used: requests.cpu=200m, limited: requests.cpu=500m
+kubectl -n lab-quota describe quota compute
+Name:            compute
+Namespace:       lab-quota
+Resource         Used   Hard
+--------         ----   ----
+limits.memory    128Mi  512Mi
+pods             1      3
+requests.cpu     200m   500m
+requests.memory  100Mi  256Mi
+PASS q-no-requests was refused (must specify requests)
+PASS q-small fit inside the quota
+PASS q-big was refused (exceeded quota)

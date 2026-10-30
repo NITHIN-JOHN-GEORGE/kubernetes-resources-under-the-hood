@@ -1,0 +1,55 @@
+kubectl apply -f labs/17-not-all-memory-is-equal/pod.yaml
+pod/mem-lab created
+kubectl wait --for=condition=Ready pod/mem-lab --timeout=120s
+pod/mem-lab condition met
+kubectl exec mem-lab -- cat /sys/fs/cgroup/memory.current
+2396160
+kubectl exec mem-lab -- grep -E '^(anon|file|inactive_file) ' /sys/fs/cgroup/memory.stat
+anon 667648
+file 4096
+inactive_file 4096
+kubectl exec mem-lab -- cache --mib 192
+cache: wrote and read 192 MiB
+kubectl exec mem-lab -- cat /sys/fs/cgroup/memory.current
+131428352
+kubectl exec mem-lab -- grep -E '^(anon|file|inactive_file) ' /sys/fs/cgroup/memory.stat
+anon 667648
+file 128032768
+inactive_file 128032768
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh mem-lab)/memory.events"
+./scripts/pod-cgroup.sh mem-lab
+low 0
+high 0
+max 1814
+oom 0
+oom_kill 0
+oom_group_kill 0
+kubectl exec mem-lab -- alloc --mib 16 --every 100ms
+allocated 16 MiB
+allocated 32 MiB
+allocated 48 MiB
+allocated 64 MiB
+allocated 80 MiB
+allocated 96 MiB
+allocated 112 MiB
+command terminated with exit code 137
+echo "exit code: $?"
+exit code: 137
+sleep 5
+kubectl get pod mem-lab -o jsonpath='restarts={.status.containerStatuses[0].restartCount} reason={.status.containerStatuses[0].lastState.terminated.reason}{"\n"}'
+restarts=1 reason=OOMKilled
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh mem-lab)/memory.events"
+./scripts/pod-cgroup.sh mem-lab
+low 0
+high 0
+max 2322
+oom 1
+oom_kill 3
+oom_group_kill 1
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh mem-lab)/memory.peak"
+./scripts/pod-cgroup.sh mem-lab
+134217728
+PASS the cgroup hit memory.max 2322 times (reclaim)
+PASS the alloc step ended in an OOM group kill
+PASS the container was restarted
+PASS memory.peak remembers 128 MiB

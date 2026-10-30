@@ -1,0 +1,32 @@
+# Both pods run 4 busy loops. Only cpu-limited has a CPU limit.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-limited
+  annotations:
+    what: "4 busy loops that each want a whole CPU, squeezed into a 200m limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["burn", "--threads", "4"]
+      resources:
+        requests: {cpu: 100m, memory: 16Mi}
+        limits:   {cpu: 200m, memory: 32Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-unlimited
+  annotations:
+    what: "The same 4 busy loops, with no CPU limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["burn", "--threads", "4"]
+      resources:
+        requests: {cpu: 100m, memory: 16Mi}
+        limits:   {memory: 32Mi}

@@ -9,26 +9,38 @@ on:
     - cron: "0 4 * * 1"   # weekly, to catch breakage from new kind or Kubernetes releases
 
 jobs:
-  lab:
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
-      - name: Lint shell scripts
+      - name: shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck -S warning lib/*.sh scripts/*.sh modules/*/run.sh
+          shellcheck -S warning lib/*.sh scripts/*.sh labs/*/check.sh incidents/*/*.sh
 
-      - name: Create kind cluster
+  labs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [default, pressure, pids]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kind
         uses: helm/kind-action@v1
         with:
-          config: kind-config.yaml
-          cluster_name: under-the-hood
-
-      - name: Run every module
-        run: make check-all
-
+          install_only: true
+      - name: Create the cluster (${{ matrix.profile }})
+        run: make cluster PROFILE=${{ matrix.profile }}
+      - name: Run every lab for this profile
+        run: make test
+      - name: Upload expected.txt files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expected-${{ matrix.profile }}
+          path: labs/*/expected.txt
       - name: Debug on failure
         if: failure()
         run: |

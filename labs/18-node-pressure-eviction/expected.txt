@@ -1,0 +1,39 @@
+docker exec under-the-hood-worker grep -A4 evictionHard /var/lib/kubelet/config.yaml
+evictionHard:
+  imagefs.available: 0%
+  memory.available: 75%
+  nodefs.available: 0%
+  nodefs.inodesFree: 0%
+kubectl get node under-the-hood-worker -o jsonpath='{.status.capacity.memory}{"  capacity\n"}{.status.allocatable.memory}{"  allocatable\n"}'
+8126480Ki  capacity
+2031620Ki  allocatable
+kubectl apply -f labs/18-node-pressure-eviction/pods.yaml
+pod/memory-hog created
+pod/calm-burstable created
+pod/calm-guaranteed created
+for i in $(seq 30); do
+  [ "$(kubectl get pod memory-hog -o jsonpath='{.status.reason}')" = Evicted ] && break
+  sleep 5
+done
+seq 30
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pod memory-hog -o jsonpath='{.status.reason}'
+kubectl get pods
+NAME              READY   STATUS    RESTARTS   AGE
+calm-burstable    1/1     Running   0          40s
+calm-guaranteed   1/1     Running   0          40s
+memory-hog        0/1     Error     0          41s
+kubectl get pod memory-hog -o jsonpath='{.status.reason}: {.status.message}{"\n"}'
+Evicted: The node was low on resource: memory. Threshold quantity: 6094860Ki, available: 6090788Ki. Container main was using 1506200Ki, request is 0, has larger consumption of memory. 
+PASS the cluster uses the pressure profile
+PASS memory-hog was Evicted
+PASS because the node was low on memory
+PASS calm-burstable kept running
+PASS calm-guaranteed kept running

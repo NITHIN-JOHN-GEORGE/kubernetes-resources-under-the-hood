@@ -1,0 +1,16 @@
+# Needs the pids profile (podPidsLimit: 64): make cluster PROFILE=pids
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pid-hog
+  annotations:
+    what: "Tries to start 100 processes against a 64-process limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["forkmany", "--n", "100"]
+      resources:
+        requests: {cpu: 10m, memory: 16Mi}
+        limits:   {memory: 64Mi}

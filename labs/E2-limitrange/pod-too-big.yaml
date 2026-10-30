@@ -1,0 +1,16 @@
+# Memory limit above the LimitRange max of 256Mi.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lr-too-big
+  namespace: lab-limits
+  annotations:
+    what: "Just sleeps. Asks for a 512Mi memory limit, above the LimitRange maximum."
+spec:
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 100m, memory: 64Mi}
+        limits:   {cpu: 200m, memory: 512Mi}

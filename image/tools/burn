@@ -1,0 +1,13 @@
+#!/bin/sh
+# burn --threads N   Start N busy loops that each want a whole CPU, forever.
+#                     N can be "all": one per CPU the container can see (nproc).
+n=1
+while [ $# -gt 0 ]; do case "$1" in --threads) n="$2"; shift 2;; *) echo "usage: burn --threads N|all"; exit 1;; esac; done
+[ "$n" = all ] && n=$(nproc --all)
+echo "burn: starting $n busy loops"
+i=0
+while [ "$i" -lt "$n" ]; do
+  ( while :; do :; done ) &
+  i=$((i+1))
+done
+wait

@@ -1,0 +1,32 @@
+# Same greedy pods as lab 12, but with different CPU requests: 100m and 800m.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: weight-low
+  annotations:
+    what: "One busy loop per node CPU. Requests 100m, no CPU limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["burn", "--threads", "all"]
+      resources:
+        requests: {cpu: 100m, memory: 16Mi}
+        limits:   {memory: 64Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: weight-high
+  annotations:
+    what: "One busy loop per node CPU. Requests 800m, no CPU limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["burn", "--threads", "all"]
+      resources:
+        requests: {cpu: 800m, memory: 16Mi}
+        limits:   {memory: 64Mi}

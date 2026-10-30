@@ -1,0 +1,19 @@
+kubectl apply -f labs/21-in-place-resize/pod.yaml
+pod/resize-demo created
+kubectl wait --for=condition=Ready pod/resize-demo --timeout=120s
+pod/resize-demo condition met
+kubectl exec resize-demo -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+20000 100000
+67108864
+kubectl patch pod resize-demo --subresource resize --patch \
+  '{"spec":{"containers":[{"name":"main","resources":{"requests":{"cpu":"500m","memory":"128Mi"},"limits":{"cpu":"500m","memory":"128Mi"}}}]}}'
+pod/resize-demo patched
+sleep 5
+kubectl exec resize-demo -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
+50000 100000
+134217728
+kubectl get pod resize-demo -o jsonpath='restarts={.status.containerStatuses[0].restartCount}{"\n"}'
+restarts=0
+PASS cpu.max is now 50000 100000 (500m)
+PASS memory.max is now 134217728 (128Mi)
+PASS and the container never restarted

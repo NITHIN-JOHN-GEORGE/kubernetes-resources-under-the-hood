@@ -1,0 +1,37 @@
+kubectl apply -f labs/20-pids-and-disk/pod-pids.yaml
+pod/pid-hog created
+kubectl wait --for=condition=Ready pod/pid-hog --timeout=120s
+pod/pid-hog condition met
+sleep 3
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh pid-hog)/pids.max"
+./scripts/pod-cgroup.sh pid-hog
+64
+docker exec under-the-hood-worker cat "$(./scripts/pod-cgroup.sh pid-hog)/pids.current"
+./scripts/pod-cgroup.sh pid-hog
+63
+kubectl logs pid-hog | tail -3
+/usr/local/bin/forkmany: line 0: can't fork: Resource temporarily unavailable
+forkmany: spawner finished
+kubectl apply -f labs/20-pids-and-disk/pod-disk.yaml
+pod/disk-hog created
+for i in $(seq 24); do
+  [ "$(kubectl get pod disk-hog -o jsonpath='{.status.reason}')" = Evicted ] && break
+  sleep 5
+done
+seq 24
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}'
+kubectl get pod disk-hog -o jsonpath='{.status.reason}: {.status.message}{"\n"}'
+Evicted: Pod ephemeral local storage usage exceeds the total limit of containers 50Mi. 
+PASS the cluster uses the pids profile
+PASS the pod's pids.max is 64
+PASS pid-hog is still Running: forks are refused, nothing is killed
+PASS disk-hog was evicted for its disk use

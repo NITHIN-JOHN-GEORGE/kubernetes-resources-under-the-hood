@@ -1,0 +1,42 @@
+kubectl apply -f labs/10-follow-one-pod-down/pod.yaml
+pod/follow-me created
+kubectl wait --for=condition=Ready pod/follow-me --timeout=120s
+pod/follow-me condition met
+CID=$(kubectl get pod follow-me -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#containerd://##')
+kubectl get pod follow-me -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#containerd://##'
+docker exec under-the-hood-worker crictl inspect $CID | grep -E '"cgroupsPath"|"shares"|"quota"|"period"|"limit"'
+        "cgroupsPath": "kubelet-kubepods-burstable-poda331bd19_f1da_4043_a794_0085ca918236.slice:cri-containerd:182501fd951414c4d73aa670144cc9d2dbc0e0d9615ddd8df8944306f7152fea",
+            "period": 100000,
+            "quota": 50000,
+            "shares": 256
+            "limit": 134217728,
+docker exec under-the-hood-worker systemctl show cri-containerd-$CID.scope -p CPUWeight -p CPUQuotaPerSecUSec -p MemoryMax
+CPUWeight=35
+CPUQuotaPerSecUSec=500ms
+MemoryMax=134217728
+CDIR="$(./scripts/pod-cgroup.sh follow-me)/cri-containerd-$CID.scope"
+./scripts/pod-cgroup.sh follow-me
+docker exec under-the-hood-worker cat $CDIR/cpu.weight $CDIR/cpu.max $CDIR/memory.max
+35
+50000 100000
+134217728
+kubectl exec follow-me -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max /sys/fs/cgroup/cpu.weight /sys/fs/cgroup/memory.min
+50000 100000
+134217728
+35
+0
+HPID=$(docker exec under-the-hood-worker head -n1 $CDIR/cgroup.procs)
+docker exec under-the-hood-worker head -n1 $CDIR/cgroup.procs
+docker exec under-the-hood-worker cat /proc/$HPID/comm /proc/$HPID/cgroup
+sleep
+0::/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-poda331bd19_f1da_4043_a794_0085ca918236.slice/cri-containerd-182501fd951414c4d73aa670144cc9d2dbc0e0d9615ddd8df8944306f7152fea.scope
+kubectl exec follow-me -- cat /proc/1/comm /proc/self/cgroup
+sleep
+0::/
+PASS the runtime spec asks for 256 CPU shares (250m)
+PASS and a quota of 50000 per 100000 (500m)
+PASS systemd holds the limit as 500ms per second
+PASS cpu.max is 50000 100000
+PASS memory.max is 134217728
+PASS memory.min is 0: the memory request isn't protected by the kernel
+PASS inside the pod, the cgroup path reads 0::/

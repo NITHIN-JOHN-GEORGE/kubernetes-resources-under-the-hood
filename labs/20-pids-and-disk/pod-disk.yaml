@@ -1,0 +1,22 @@
+# There is no cgroup for disk space. The kubelet measures it and evicts the pod.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disk-hog
+  annotations:
+    what: "Writes 100 MiB into an emptyDir with a 50Mi ephemeral-storage limit."
+spec:
+  terminationGracePeriodSeconds: 1
+  restartPolicy: Never
+  volumes:
+    - name: data
+      emptyDir: {}
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sh", "-c", "sleep 5; dd if=/dev/zero of=/data/fill bs=1M count=100; echo wrote 100MiB; sleep infinity"]
+      volumeMounts:
+        - {name: data, mountPath: /data}
+      resources:
+        requests: {cpu: 10m, memory: 16Mi, ephemeral-storage: 10Mi}
+        limits:   {memory: 64Mi, ephemeral-storage: 50Mi}

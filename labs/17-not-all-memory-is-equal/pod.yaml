@@ -1,0 +1,16 @@
+# An empty container with a 128Mi limit. The experiments run inside it with kubectl exec.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mem-lab
+  annotations:
+    what: "Just sleeps. We run cache and alloc inside it to fill it with two kinds of memory."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 100m, memory: 128Mi}
+        limits:   {cpu: 500m, memory: 128Mi}

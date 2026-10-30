@@ -1,41 +1,48 @@
 #!/usr/bin/env bash
-# Shared helpers for every module. Source this file; do not run it directly.
-
-set -euo pipefail
-
+# Shared helpers for check.sh, answer.sh and the incident scripts. Source it; don't run it.
+set -u
 CLUSTER="${CLUSTER:-under-the-hood}"
-NS="${NS:-lab}"
 WORKER="${WORKER:-${CLUSTER}-worker}"
-WAIT="${WAIT:-120s}"
-
-if [ -t 1 ]; then
-  BOLD=$'\e[1m'; DIM=$'\e[2m'; GREEN=$'\e[32m'; RED=$'\e[31m'; CYAN=$'\e[36m'; RESET=$'\e[0m'
-else
-  BOLD=""; DIM=""; GREEN=""; RED=""; CYAN=""; RESET=""
-fi
-
-title()  { printf '\n%s== %s ==%s\n' "$BOLD" "$*" "$RESET"; }
-step()   { printf '\n%s$ %s%s\n' "$CYAN" "$*" "$RESET"; }
-note()   { printf '%s%s%s\n' "$DIM" "$*" "$RESET"; }
+NS="${NS:-lab}"
+if [ -t 1 ]; then GREEN=$'\e[32m'; RED=$'\e[31m'; BOLD=$'\e[1m'; DIM=$'\e[2m'; RESET=$'\e[0m'; else GREEN=""; RED=""; BOLD=""; DIM=""; RESET=""; fi
+FAILED=0
 pass()   { printf '%sPASS%s %s\n' "$GREEN" "$RESET" "$*"; }
 fail()   { printf '%sFAIL%s %s\n' "$RED" "$RESET" "$*"; FAILED=1; }
-FAILED=0
-finish() { if [ "$FAILED" -ne 0 ]; then exit 1; fi; }
+title()  { printf '\n%s== %s ==%s\n' "$BOLD" "$*" "$RESET"; }
+note()   { printf '%s%s%s\n' "$DIM" "$*" "$RESET"; }
+finish() { [ "$FAILED" = 0 ] || { echo; echo "Some checks failed. Compare your steps with the README, or run: make test LAB=${LAB:-N}"; exit 1; }; }
 
-# Run a command, printing it first so readers can copy it.
-run() { step "$*"; "$@"; }
+# Is this pod there and running? Prints a FAIL telling the reader which step to run if not.
+need_pod() { kubectl -n "$NS" get pod "$1" >/dev/null 2>&1 || { fail "pod $1 not found. Run the README's first step: kubectl apply -f ${2:-the lab folder}"; finish; }; }
 
+# Read a cgroup file from inside a pod's container.
+cg() { kubectl -n "$NS" exec "$1" -c "${3:-main}" -- cat "/sys/fs/cgroup/$2" 2>/dev/null; }
+cg_key() { cg "$1" "$2" | awk -v k="$3" '$1==k {print $2}'; }
+
+# Run a command on the worker node (a kind node is a Docker container).
+on_node() { docker exec "$WORKER" sh -c "$*"; }
+
+# The pod's cgroup folder on the node.
+pod_cgroup_dir() { "$(dirname "${BASH_SOURCE[0]}")/../scripts/pod-cgroup.sh" "$1" "$NS"; }
+
+# The kubelet's box for all pods: kubepods.slice, or kubelet.slice/kubelet-kubepods.slice on kind.
+kubepods_root() { on_node "find /sys/fs/cgroup -maxdepth 2 -type d -name '*kubepods.slice' | head -n1"; }
+
+# Read a key from a file in a Docker container (labs 01–07).
+in_box() { docker exec "$1" sh -c "$2" 2>/dev/null; }
+
+# --- Used by the incident scripts ---
+CYAN=$'\e[36m'; [ -t 1 ] || CYAN=""
+step()   { printf '\n%s$ %s%s\n' "$CYAN" "$*" "$RESET"; }
+run()    { step "$*"; "$@"; }
 ensure_ns() { kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS" >/dev/null; }
-
-# Apply a manifest into the lab namespace, then show what it started.
+# Apply a manifest into the lab namespace, then say what each pod is for.
 apply() {
   ensure_ns
   run kubectl -n "$NS" apply -f "$1"
   local pods; pods="$(kubectl apply --dry-run=client -o name -f "$1" | sed -n 's#^pod/##p')"
   show_pods $pods
 }
-
-# Say what each pod is for (its "what" annotation) and its requests and limits.
 show_pods() {
   note "What's running:"
   for p in "$@"; do
@@ -43,119 +50,19 @@ show_pods() {
   done
 }
 
-wait_ready() { run kubectl -n "$NS" wait --for=condition=Ready "pod/$1" --timeout="$WAIT"; }
-
-# Read a file inside the container's own cgroup (cgroups v2 + cgroup namespace:
-# the container sees its own cgroup mounted at /sys/fs/cgroup).
-cg() { kubectl -n "$NS" exec "$1" -c "${3:-main}" -- cat "/sys/fs/cgroup/$2"; }
-
-# Print a cgroup file with a label.
-show_cg() { printf '  %-22s %s\n' "$2" "$(cg "$1" "$2" "${3:-}" | tr '\n' ' ')"; }
-
-# Read one key from a flat-keyed cgroup file such as cpu.stat or memory.events.
-cg_key() { cg "$1" "$2" | awk -v k="$3" '$1==k {print $2}'; }
-
-# Run a command on the worker node (the kind node is a Docker container).
-on_node() { docker exec "$WORKER" sh -c "$*"; }
-
-pod_uid() { kubectl -n "$NS" get pod "$1" -o jsonpath='{.metadata.uid}'; }
-
-# The kubelet's pod tree. On a normal node it is /sys/fs/cgroup/kubepods.slice; kind runs the
-# kubelet with cgroupRoot=/kubelet, so there it is /sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice.
-kubepods_root() {
-  on_node "find /sys/fs/cgroup -maxdepth 2 -type d -name '*kubepods.slice' | head -n1"
+# CPU used by a pod, in millicores, over about N seconds (default 5).
+# The clock and cpu.stat are read together on the node, so slow kubectl calls don't skew it.
+pod_millicores() {
+  local dir; dir="$(pod_cgroup_dir "$1")"
+  local a b; a=$(on_node "echo \$(date +%s%N) \$(awk '/^usage_usec/{print \$2}' $dir/cpu.stat)")
+  sleep "${2:-5}"
+  b=$(on_node "echo \$(date +%s%N) \$(awk '/^usage_usec/{print \$2}' $dir/cpu.stat)")
+  set -- $a $b
+  echo $(( ($4 - $2) * 1000000 / ($3 - $1) ))
 }
 
-# Directory of a pod's cgroup on the node (systemd driver: dashes in the UID become underscores).
-pod_cgroup_dir() {
-  local uid root; uid="$(pod_uid "$1" | tr '-' '_')"; root="$(kubepods_root)"
-  on_node "find '$root' -maxdepth 2 -type d -name '*pod${uid}.slice' | head -n1"
-}
-
-# Delete a module's pods when the script exits: on success, on failure and on Ctrl-C.
-# Set KEEP=1 to leave them running so you can explore.
-cleanup_on_exit() {
-  CLEAN_SELECTOR="$1"
-  trap _cleanup EXIT
-}
-_cleanup() {
-  local rc=$?
-  # Modules can define module_cleanup for extra work (restore kubelet config, delete a namespace).
-  if declare -F module_cleanup >/dev/null; then module_cleanup || true; fi
-  if [ "${KEEP:-0}" != "1" ] && [ -n "${CLEAN_SELECTOR:-}" ]; then
-    kubectl -n "$NS" delete pod -l "$CLEAN_SELECTOR" --ignore-not-found --wait=false >/dev/null 2>&1 || true
-    note ""
-    note "Cleaned up the module's pods. Run with KEEP=1 to keep them."
-  fi
-  exit "$rc"
-}
-
-# ---------------------------------------------------------------------------
-# Kubelet config changes on the worker node (modules 10 and 12).
-# The original config is backed up once and always restored by kubelet_restore.
-# ---------------------------------------------------------------------------
-KUBELET_CFG=/var/lib/kubelet/config.yaml
-
-wait_node_ready() {
-  sleep 5
-  kubectl wait --for=condition=Ready "node/$WORKER" --timeout=180s >/dev/null
-}
-
-kubelet_backup() {
-  on_node "[ -f $KUBELET_CFG.lab-backup ] || cp $KUBELET_CFG $KUBELET_CFG.lab-backup"
-}
-
-kubelet_restart() {
-  on_node "systemctl restart kubelet"
-  wait_node_ready
-}
-
-# Set a top-level scalar, e.g. kubelet_set podPidsLimit 64
-kubelet_set() {
-  on_node "if grep -q '^$1:' $KUBELET_CFG; then sed -i 's|^$1:.*|$1: $2|' $KUBELET_CFG; else echo '$1: $2' >> $KUBELET_CFG; fi"
-}
-
-# Replace the whole evictionHard map. Pass entries as key=value, e.g. memory.available=500Mi
-kubelet_set_eviction_hard() {
-  local add="echo 'evictionHard:' >> $KUBELET_CFG;"
-  for kv in "$@"; do add="$add echo '  ${kv%%=*}: \"${kv#*=}\"' >> $KUBELET_CFG;"; done
-  on_node "awk 'BEGIN{skip=0} /^evictionHard:/{skip=1; next} skip && /^[[:space:]]/{next} {skip=0; print}' $KUBELET_CFG > $KUBELET_CFG.tmp && mv $KUBELET_CFG.tmp $KUBELET_CFG && $add"
-}
-
-kubelet_restore() {
-  if on_node "[ -f $KUBELET_CFG.lab-backup ]"; then
-    on_node "mv $KUBELET_CFG.lab-backup $KUBELET_CFG"
-    kubelet_restart
-    note "Restored the worker's original kubelet config."
-  fi
-}
-
-# Print a kubelet config value as the running kubelet sees it (from configz).
-kubelet_live() {
-  local raw; raw="$(kubectl get --raw "/api/v1/nodes/$WORKER/proxy/configz")"
-  printf '%s' "$raw" | grep -o "\"$1\":{[^}]*}" | head -n1 && return 0
-  printf '%s' "$raw" | grep -o "\"$1\":[^,}]*" | head -n1
-}
-
-# Wait until the lab namespace has no pods left (so earlier modules don't skew scheduling).
-wait_lab_empty() {
-  kubectl -n "$NS" wait --for=delete pod --all --timeout=90s >/dev/null 2>&1 || true
-}
-
-# Sum of CPU requests (millicores) of non-terminated pods on the worker.
-worker_cpu_requested() {
-  kubectl get pods -A --field-selector "spec.nodeName=$WORKER,status.phase!=Succeeded,status.phase!=Failed" \
-    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.resources.requests.cpu}{"\n"}{end}{end}' |
-    awk '/m$/ {sub(/m$/,""); s+=$1; next} /^[0-9.]+$/ {s+=$1*1000} END {print int(s)}'
-}
-
-# Allocatable CPU of the worker in millicores.
-worker_cpu_allocatable() {
-  kubectl get node "$WORKER" -o jsonpath='{.status.allocatable.cpu}' |
-    awk '/m$/ {sub(/m$/,""); print int($1); next} {print int($1*1000)}'
-}
-
-# Kubernetes server minor version, e.g. 33
-server_minor() {
-  kubectl version -o yaml 2>/dev/null | awk '/serverVersion:/{f=1} f && /minor:/ {gsub(/[^0-9]/,"",$2); print $2; exit}'
-}
+# --- Pacing for the incidents ---
+# A numbered section header, and a pause that waits for Enter (skipped when there's no keyboard, as in CI).
+stage() { printf '\n%s── %s ──%s\n\n' "$BOLD" "$*" "$RESET"; }
+pause() { if [ -t 0 ] && [ -t 1 ]; then read -rp "  ⏎  Press Enter to continue " _; fi; }
+wait_ready() { kubectl -n "$NS" wait --for=condition=Ready "pod/$1" --timeout=120s >/dev/null; }

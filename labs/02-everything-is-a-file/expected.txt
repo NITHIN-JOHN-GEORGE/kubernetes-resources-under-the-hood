@@ -1,0 +1,14 @@
+docker run -d --name lab-box --cpus=0.5 --memory=128m ubuntu sleep infinity
+0e4ba72657a93e2101a87cdf5af8d1aa11c25395252fb049a508da865921efec
+docker exec lab-box cat /etc/hostname
+0e4ba72657a9
+docker exec lab-box sh -c 'echo "gone" > /dev/null; echo "wrote to /dev/null"'
+wrote to /dev/null
+docker exec lab-box ls -l /proc/meminfo
+-r--r--r-- 1 root root 0 Oct 30 18:36 /proc/meminfo
+docker exec lab-box head -3 /proc/meminfo
+MemTotal:        8126480 kB
+MemFree:         3453764 kB
+MemAvailable:    6565944 kB
+PASS /proc/meminfo is 0 bytes on 'disk'
+PASS and yet it holds MemTotal: the kernel makes the answer when you read it

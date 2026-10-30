@@ -1,0 +1,33 @@
+docker run -d --name lab-box --cpus=0.5 --memory=128m ubuntu sleep infinity
+6767f6120ab623464916d117bd0215236bd177149a81c48dabda44ef25a1ac03
+docker exec lab-box ls /sys
+block
+bus
+class
+dev
+devices
+firmware
+fs
+kernel
+module
+docker exec lab-box cat /sys/devices/system/cpu/online
+0-9
+docker exec lab-box ls /sys/fs
+9p
+bpf
+btrfs
+cgroup
+erofs
+ext4
+f2fs
+fuse
+nfs
+pstore
+virtiofs
+xfs
+docker exec lab-box sh -c 'mount | grep cgroup'
+cgroup on /sys/fs/cgroup type cgroup2 (ro,nosuid,nodev,noexec,relatime)
+docker exec lab-box stat -fc %T /sys/fs/cgroup
+cgroup2fs
+PASS /sys/fs/cgroup is cgroups v2
+PASS it's mounted read-only inside the container

@@ -1,0 +1,20 @@
+# A Guaranteed pod we resize while it runs. Requests equal limits so the QoS class
+# (which can't change during a resize) stays Guaranteed.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: resize-demo
+  annotations:
+    what: "Just sleeps. We change its CPU and memory while it runs."
+spec:
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resizePolicy:
+        - {resourceName: cpu, restartPolicy: NotRequired}
+        - {resourceName: memory, restartPolicy: NotRequired}
+      resources:
+        requests: {cpu: 200m, memory: 64Mi}
+        limits:   {cpu: 200m, memory: 64Mi}

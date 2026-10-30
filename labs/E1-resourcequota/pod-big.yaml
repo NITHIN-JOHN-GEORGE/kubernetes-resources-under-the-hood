@@ -1,0 +1,16 @@
+# Would push requests.cpu to 600m, over the 500m quota.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: q-big
+  namespace: lab-quota
+  annotations:
+    what: "Just sleeps. Requests 400m CPU, which would push the namespace over its quota."
+spec:
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sleep", "infinity"]
+      resources:
+        requests: {cpu: 400m, memory: 100Mi}
+        limits:   {memory: 128Mi}
