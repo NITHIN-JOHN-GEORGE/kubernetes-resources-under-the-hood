@@ -41,7 +41,7 @@ It shows the evidence from your cluster, explains why it happened step by step, 
 <details>
 <summary>Spoiler: the answer</summary>
 
-**The idle pods' memory requests.** The scheduler compares requests with the node's allocatable memory and never looks at real usage. The three sleeping batch jobs requested almost the whole node between them, so there wasn't 1 GiB left to promise to `new-feature`. "Insufficient memory" means "not enough left to promise", not "not enough free". Read more in [chapter 9 of the blog](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#9-the-four-checkpoints).
+**The idle pods' memory requests.** The scheduler compares requests with the node's allocatable memory and never looks at real usage. The three sleeping batch jobs requested almost the whole node between them, so there wasn't 1 GiB left to promise to `new-feature`. "Insufficient memory" means "not enough left to promise", not "not enough free". Read more in [chapter 9 of the blog](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#9-the-four-checkpoints).
 </details>
 
 ## Clean up

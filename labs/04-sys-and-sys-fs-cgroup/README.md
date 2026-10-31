@@ -1,6 +1,6 @@
 # 04 · /sys and /sys/fs/cgroup
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 4](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#4-sys-the-kernels-settings-panel)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 4](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#4-sys-the-kernels-settings-panel)
 >
 > **You'll learn:** where the kernel keeps its settings, and where resource limits live.
 

@@ -1,6 +1,6 @@
 # 20 · The other limits: PIDs and disk
 
-> **Runs on:** the kind cluster with the pids profile: `make clean && make cluster PROFILE=pids` · **Time:** 10 minutes · **Blog:** [chapter 20](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#20-the-other-limits-briefly)
+> **Runs on:** the kind cluster with the pids profile: `make clean && make cluster PROFILE=pids` · **Time:** 10 minutes · **Blog:** [chapter 20](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#20-the-other-limits-briefly)
 >
 > **You'll learn:** that the number of processes is capped by a cgroup, and that disk space isn't: the kubelet measures it and evicts.
 

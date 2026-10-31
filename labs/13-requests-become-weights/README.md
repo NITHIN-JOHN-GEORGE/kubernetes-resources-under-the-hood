@@ -1,6 +1,6 @@
 # 13 · CPU requests become weights
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 13](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#13-cpu-requests-become-weights)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 13](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#13-cpu-requests-become-weights)
 >
 > **You'll learn:** what a CPU request really buys you, how it becomes `cpu.weight`, and why the **pod's** weight is the one that decides the split.
 

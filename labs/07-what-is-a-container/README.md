@@ -1,6 +1,6 @@
 # 07 · What a container is
 
-> **Runs on:** Docker only · **Time:** 10 minutes · **Blog:** [chapter 7](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#7-so-what-is-a-container)
+> **Runs on:** Docker only · **Time:** 10 minutes · **Blog:** [chapter 7](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#7-so-what-is-a-container)
 >
 > **You'll learn:** that a container is ordinary processes with namespaces (what they see) and cgroups (what they get).
 

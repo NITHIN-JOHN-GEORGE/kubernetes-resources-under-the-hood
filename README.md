@@ -4,7 +4,7 @@
 
 ### From YAML to cgroups
 
-The hands-on lab for **[Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/)**. One lab per chapter, run on your own laptop, reading the real kernel files.
+The hands-on lab for **[Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/)**. One lab per chapter, run on your own laptop, reading the real kernel files.
 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![cgroups v2](https://img.shields.io/badge/cgroups-v2-38E8C6?style=flat-square&logo=linux&logoColor=black)
@@ -192,7 +192,7 @@ Then run `make check-setup`. Every ✗ comes with the fix.
 
 ## Further reading
 
-- [The blog post](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/), which this lab follows chapter by chapter
+- [The blog post](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/), which this lab follows chapter by chapter
 - [Linux kernel docs: Control Group v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
 - [Kubernetes docs: Resource management for pods and containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 

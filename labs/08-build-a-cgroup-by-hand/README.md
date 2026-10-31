@@ -1,6 +1,6 @@
 # 08 · Build a cgroup by hand
 
-> **Runs on:** the kind cluster (`make cluster`), used as a plain Linux machine · **Time:** 10 minutes · **Blog:** [chapter 8](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#8-build-a-cgroup-by-hand)
+> **Runs on:** the kind cluster (`make cluster`), used as a plain Linux machine · **Time:** 10 minutes · **Blog:** [chapter 8](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#8-build-a-cgroup-by-hand)
 >
 > **You'll learn:** that a cgroup is a folder, its files are dials, and a process joins it by writing its PID into `cgroup.procs`. Exactly what a container runtime does.
 

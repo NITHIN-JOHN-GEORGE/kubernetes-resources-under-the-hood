@@ -1,6 +1,6 @@
 # 01 · Processes and threads
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 1](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#1-what-happens-when-you-run-a-program)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 1](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#1-what-happens-when-you-run-a-program)
 >
 > **You'll learn:** what a process and a thread are, and why "one core runs one thread at a time" matters for everything later.
 

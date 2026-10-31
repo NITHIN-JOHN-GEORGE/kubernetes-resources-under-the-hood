@@ -1,6 +1,6 @@
 # 02 · Everything in Linux is a file
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 2](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#2-everything-in-linux-is-a-file)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 2](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#2-everything-in-linux-is-a-file)
 >
 > **You'll learn:** that the kernel shows its live information as files that aren't stored anywhere.
 

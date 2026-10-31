@@ -1,6 +1,6 @@
 # 14 · CPU limits become a budget: throttling
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 14](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#14-cpu-limits-become-a-budget-throttling)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 14](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#14-cpu-limits-become-a-budget-throttling)
 >
 > **You'll learn:** how `cpu.max` works as a budget per 100 ms, why every thread spends the same budget, and how to see throttling in `cpu.stat`.
 

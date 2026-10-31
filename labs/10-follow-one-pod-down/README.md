@@ -1,6 +1,6 @@
 # 10 · Follow one pod down to the kernel
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 10](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#10-follow-one-pod-down-to-the-kernel)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 10](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#10-follow-one-pod-down-to-the-kernel)
 >
 > **You'll learn:** where `250m`, `500m` and `128Mi` end up, layer by layer: the runtime's spec, systemd, and the cgroup files.
 

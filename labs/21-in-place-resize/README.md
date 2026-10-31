@@ -1,6 +1,6 @@
 # 21 · Finale: resize a running pod
 
-> **Runs on:** the kind cluster (`make cluster`), Kubernetes 1.33 or newer · **Time:** 5 minutes · **Blog:** [chapter 21](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#21-finale-resize-a-running-pod)
+> **Runs on:** the kind cluster (`make cluster`), Kubernetes 1.33 or newer · **Time:** 5 minutes · **Blog:** [chapter 21](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#21-finale-resize-a-running-pod)
 >
 > **You'll learn:** that changing a pod's CPU and memory in place is just the kubelet rewriting cgroup files, like you did by hand in lab 08.
 

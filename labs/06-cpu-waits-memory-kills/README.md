@@ -1,6 +1,6 @@
 # 06 · CPU waits, memory kills
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 6](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#6-why-cpu-limits-slow-you-down-but-memory-limits-kill-you)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 6](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#6-why-cpu-limits-slow-you-down-but-memory-limits-kill-you)
 >
 > **You'll learn:** why a CPU limit makes a program slow, while a memory limit makes it crash.
 

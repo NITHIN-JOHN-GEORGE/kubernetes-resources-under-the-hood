@@ -1,6 +1,6 @@
 # 05 · Your first look at cpu.max and cpu.weight
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 5](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#5-your-first-look-at-cpumax-and-cpuweight)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 5](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#5-your-first-look-at-cpumax-and-cpuweight)
 >
 > **You'll learn:** how `--cpus=0.5 --memory=128m` turn into numbers in three files, and the difference between a budget and a share.
 

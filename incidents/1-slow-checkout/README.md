@@ -41,7 +41,7 @@ It shows the evidence from your cluster, explains why it happened step by step, 
 <details>
 <summary>Spoiler: the answer</summary>
 
-**CPU throttling.** Each request runs 4 processes at once, about 160 ms of CPU in total. The 200m limit is a 20 ms budget per 100 ms period, which 4 processes spend in about 5 ms; then the whole container waits for the next period. So a request takes about 8 periods, around 800 ms. The pod sleeps between requests, so its average CPU stays under the limit and the graph looks fine. Read more in [chapter 14 of the blog](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#14-cpu-limits-become-a-budget-throttling).
+**CPU throttling.** Each request runs 4 processes at once, about 160 ms of CPU in total. The 200m limit is a 20 ms budget per 100 ms period, which 4 processes spend in about 5 ms; then the whole container waits for the next period. So a request takes about 8 periods, around 800 ms. The pod sleeps between requests, so its average CPU stays under the limit and the graph looks fine. Read more in [chapter 14 of the blog](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#14-cpu-limits-become-a-budget-throttling).
 </details>
 
 ## Clean up

@@ -1,6 +1,6 @@
 # E3 · Priority and preemption
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
 >
 > **You'll learn:** how a high-priority pod that doesn't fit gets room by pushing a lower-priority pod off the node.
 

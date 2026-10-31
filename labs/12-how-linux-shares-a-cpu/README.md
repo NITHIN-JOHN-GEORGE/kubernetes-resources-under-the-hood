@@ -1,6 +1,6 @@
 # 12 · How Linux shares a CPU
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [chapter 12](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#12-how-linux-shares-a-cpu)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [chapter 12](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#12-how-linux-shares-a-cpu)
 >
 > **You'll learn:** what the kernel does when more threads want to run than there are CPUs.
 

@@ -1,6 +1,6 @@
 # E1 · ResourceQuota
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
 >
 > **You'll learn:** how to cap what a whole namespace can ask for, and how the API server refuses pods that would go over. No cgroup is involved.
 

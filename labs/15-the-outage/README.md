@@ -1,6 +1,6 @@
 # 15 · The outage
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 15 minutes · **Blog:** [chapter 15](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#15-the-outage-explained)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 15 minutes · **Blog:** [chapter 15](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#15-the-outage-explained)
 >
 > **You'll learn:** how throttling, with CPU usage that looks fine, turns into failed health probes, restarts and pods dropping out of a Service. The blog's outage, scaled down to a laptop.
 

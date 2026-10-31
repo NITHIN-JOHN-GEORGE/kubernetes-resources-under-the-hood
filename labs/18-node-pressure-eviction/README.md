@@ -1,6 +1,6 @@
 # 18 · When the whole node runs short
 
-> **Runs on:** the kind cluster with the pressure profile: `make clean && make cluster PROFILE=pressure` · **Time:** 10 minutes · **Blog:** [chapter 18](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#18-when-the-whole-node-runs-short)
+> **Runs on:** the kind cluster with the pressure profile: `make clean && make cluster PROFILE=pressure` · **Time:** 10 minutes · **Blog:** [chapter 18](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#18-when-the-whole-node-runs-short)
 >
 > **You'll learn:** what allocatable is, and how the kubelet picks a pod to evict when the node runs low on memory, before the kernel has to.
 

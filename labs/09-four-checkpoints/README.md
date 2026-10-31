@@ -1,6 +1,6 @@
 # 09 · The four checkpoints
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 9](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#9-the-four-checkpoints)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 9](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#9-the-four-checkpoints)
 >
 > **You'll learn:** which part of Kubernetes stops a pod, and why "which checkpoint did this?" is the fastest way to debug resource problems.
 

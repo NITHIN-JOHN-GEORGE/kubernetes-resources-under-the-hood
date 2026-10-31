@@ -1,6 +1,6 @@
 # 11 · Where every pod lives: the cgroup tree
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 11](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#11-where-every-pod-lives-the-cgroup-tree) and [chapter 18](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#qos-classes-who-is-most-protected)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 11](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#11-where-every-pod-lives-the-cgroup-tree) and [chapter 18](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#qos-classes-who-is-most-protected)
 >
 > **You'll learn:** how the kubelet nests pods by QoS class, and how that class also decides who the kernel kills first when the whole node runs out.
 

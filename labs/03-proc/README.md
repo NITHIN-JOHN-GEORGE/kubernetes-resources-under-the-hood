@@ -1,6 +1,6 @@
 # 03 · /proc: what every process is doing right now
 
-> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 3](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#3-proc-what-every-process-is-doing-right-now)
+> **Runs on:** Docker only · **Time:** 5 minutes · **Blog:** [chapter 3](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#3-proc-what-every-process-is-doing-right-now)
 >
 > **You'll learn:** how to read a process's name, threads, memory and cgroup straight from the kernel.
 

@@ -1,6 +1,6 @@
 # E2 · LimitRange
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [cheat sheet](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#cheat-sheet)
 >
 > **You'll learn:** how a namespace can fill in default requests and limits, and that the injected defaults land in `cpu.max` and `memory.max` like hand-written ones.
 

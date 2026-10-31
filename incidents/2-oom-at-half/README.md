@@ -41,7 +41,7 @@ It shows the evidence from your cluster, explains why it happened step by step, 
 <details>
 <summary>Spoiler: the answer</summary>
 
-**A short memory spike between dashboard samples.** The worker keeps a 100 MiB cache, the "about 40%" on the graph. Every 20 seconds it builds a report that needs another 200 MiB for well under a second, which goes past the 256 MiB limit, so the kernel OOM-kills it. A dashboard sampling every 15 seconds almost never catches the spike; `memory.peak` and `memory.events` do, because the kernel counts rather than samples. Read more in [chapter 17 of the blog](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#17-not-all-memory-is-equal).
+**A short memory spike between dashboard samples.** The worker keeps a 100 MiB cache, the "about 40%" on the graph. Every 20 seconds it builds a report that needs another 200 MiB for well under a second, which goes past the 256 MiB limit, so the kernel OOM-kills it. A dashboard sampling every 15 seconds almost never catches the spike; `memory.peak` and `memory.events` do, because the kernel counts rather than samples. Read more in [chapter 17 of the blog](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#17-not-all-memory-is-equal).
 </details>
 
 ## Clean up

@@ -1,6 +1,6 @@
 # 17 · Not all memory is equal
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 17](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#17-not-all-memory-is-equal)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 17](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#17-not-all-memory-is-equal)
 >
 > **You'll learn:** the difference between file cache and anonymous memory, the working set, and `memory.peak`: why a pod can be "at its limit" and fine, or killed while the graph said it had room.
 

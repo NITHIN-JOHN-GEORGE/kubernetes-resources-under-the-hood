@@ -1,6 +1,6 @@
 # 16 · Memory limits and the OOM killer
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [chapter 16](https://nithin-john-george.github.io/blog/cgroups-deep-dive-kubernetes/#16-memory-limits-and-the-oom-killer)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 5 minutes · **Blog:** [chapter 16](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#16-memory-limits-and-the-oom-killer)
 >
 > **You'll learn:** what happens at `memory.max`, what `OOMKilled` and exit code 137 mean, and how to read `memory.events`.
 
