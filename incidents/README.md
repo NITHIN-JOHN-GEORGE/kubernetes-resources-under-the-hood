@@ -27,7 +27,7 @@ make answer-1 CAUSE=show             # or skip straight to the answer
 make reset                           # clean up
 ```
 
-Each incident folder has the ticket (`ticket.md`), the pods it starts, the script that starts them (`start.sh`), a hint and the answer. Every pod carries a `what` annotation that says what it does:
+Each incident folder has its own README with the ticket, where to look, and the answer behind a spoiler, plus the pods it starts, the script that starts them (`start.sh`), the clues (`hint.md`) and the answer (`answer.sh`). Every pod carries a `what` annotation that says what it does:
 
 ```sh
 kubectl get pods -l incident -o custom-columns=NAME:.metadata.name,WHAT:.metadata.annotations.what
