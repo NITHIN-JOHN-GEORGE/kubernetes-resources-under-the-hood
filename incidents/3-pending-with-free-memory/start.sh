@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Incident 4: a new pod won't start, even though the node's memory is almost empty.
+# Incident 3: a new pod won't start, even though the node's memory is almost empty.
 source "$(dirname "$0")/../../lib/common.sh"
 kubectl -n "$NS" delete pod -l incident --ignore-not-found --wait=true >/dev/null 2>&1
-title "Incident 4: Pending, with memory to spare"
+title "Incident 3: Pending, with memory to spare"
 
 stage "1. The scene"
 # Each batch job reserves about a third of the node's allocatable memory.
@@ -39,6 +39,6 @@ cat <<'MSG'
     3. Who the promises went to.
          kubectl get pods -l incident -o custom-columns=NAME:.metadata.name,MEM_REQUEST:.spec.containers[0].resources.requests.memory
 
-  A clue, one at a time:   make hint-4
-  When you know:           make answer-4 CAUSE=<one or two words>
+  A clue, one at a time:   make hint-3
+  When you know:           make answer-3 CAUSE=<one or two words>
 MSG

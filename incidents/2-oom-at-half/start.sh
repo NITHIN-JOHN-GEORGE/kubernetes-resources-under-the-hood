@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Incident 3: a pod keeps restarting, but its memory graph sits at about half the limit.
+# Incident 2: a pod keeps restarting, but its memory graph sits at about half the limit.
 source "$(dirname "$0")/../../lib/common.sh"
 kubectl -n "$NS" delete pod -l incident --ignore-not-found --wait=true >/dev/null 2>&1
-title "Incident 3: OOMKilled at 50%"
+title "Incident 2: OOMKilled at 50%"
 
 stage "1. The scene"
 apply "$(dirname "$0")/pod.yaml"
@@ -45,6 +45,6 @@ cat <<'MSG'
          POD_DIR=$(./scripts/pod-cgroup.sh report-worker)
          docker exec under-the-hood-worker cat $POD_DIR/memory.peak $POD_DIR/memory.events
 
-  A clue, one at a time:   make hint-3
-  When you know:           make answer-3 CAUSE=<one or two words>
+  A clue, one at a time:   make hint-2
+  When you know:           make answer-2 CAUSE=<one or two words>
 MSG

@@ -1,4 +1,4 @@
-# Incident 3 · OOMKilled at half the limit
+# Incident 2 · OOMKilled at half the limit
 
 > **Runs on:** the kind cluster (`make cluster`) · **Time:** 15 minutes · **Labs that help:** [16](../../labs/16-memory-limits-and-oom/), [17](../../labs/17-not-all-memory-is-equal/)
 
@@ -9,7 +9,7 @@
 ## Start
 
 ```sh
-make incident-3
+make incident-2
 ```
 
 It walks you through three steps, pausing between each (press Enter to go on):
@@ -28,12 +28,12 @@ Find out what uses the memory when it dies. Look at these, in order:
 | 2 | What it was doing just before each restart | `kubectl logs report-worker` |
 | 3 | What the kernel remembers: compare `memory.peak` with the 256Mi limit (268435456) | `POD_DIR=$(./scripts/pod-cgroup.sh report-worker)`<br>`docker exec under-the-hood-worker cat $POD_DIR/memory.peak $POD_DIR/memory.events` |
 
-Stuck? `make hint-3` gives one clue at a time. Run it again for the next.
+Stuck? `make hint-2` gives one clue at a time. Run it again for the next.
 
 ## Check your answer
 
 ```sh
-make answer-3 CAUSE=<one or two words>     # or CAUSE=show to skip to the answer
+make answer-2 CAUSE=<one or two words>     # or CAUSE=show to skip to the answer
 ```
 
 It shows the evidence from your cluster, explains why it happened step by step, raises the memory limit live to 320Mi and shows the restarts stop.
@@ -55,6 +55,6 @@ make reset
 | File | What it is |
 |---|---|
 | `pod.yaml` | The `report-worker` pod |
-| `start.sh` | What `make incident-3` runs |
+| `start.sh` | What `make incident-2` runs |
 | `hint.md` | The clues, one per section |
-| `answer.sh` | What `make answer-3` runs |
+| `answer.sh` | What `make answer-2` runs |

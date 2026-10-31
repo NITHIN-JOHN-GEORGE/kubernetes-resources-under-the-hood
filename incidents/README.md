@@ -5,10 +5,10 @@ The labs show you each mechanism. These incidents give you a broken situation an
 | # | Ticket | Labs that help |
 |---|--------|----------------|
 | [1](1-slow-checkout/) | "Checkout is slow, but the CPU graph is under its limit" | 14, 15 |
-| [3](3-oom-at-half/) | "OOMKilled, but the dashboard never went above half" | 16, 17 |
-| [4](4-pending-with-free-memory/) | "Pending for ages, the node's memory is almost empty" | 09, 18 |
+| [2](2-oom-at-half/) | "OOMKilled, but the dashboard never went above half" | 16, 17 |
+| [3](3-pending-with-free-memory/) | "Pending for ages, the node's memory is almost empty" | 09, 18 |
 
-(Incidents 2, "the restart loop", and 5, "Go on a big node", are coming in the next version of the lab.)
+(Two more are planned: "the restart loop" and "Go on a big node".)
 
 ## How to play
 

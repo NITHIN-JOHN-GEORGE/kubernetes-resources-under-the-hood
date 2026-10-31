@@ -123,8 +123,8 @@ Once you've done the labs, try the [**incidents**](incidents/): something is bro
 | # | Ticket |
 |:-:|---|
 | 1 | "Checkout is slow, but the CPU graph is under its limit" |
-| 3 | "OOMKilled, but the dashboard never went above half" |
-| 4 | "Pending for ages, the node's memory is almost empty" |
+| 2 | "OOMKilled, but the dashboard never went above half" |
+| 3 | "Pending for ages, the node's memory is almost empty" |
 
 ```bash
 make incident-1                  # start it and read the ticket

@@ -91,6 +91,8 @@ The same `sleep`: an ordinary PID and a long cgroup path on the node; PID 1 and 
 | `requests.cpu: 250m` | `cpu.weight` | `35` | A share, only used when groups compete |
 | `requests.memory: 64Mi` | `memory.min` | `0` | No kernel protection. Used for scheduling and eviction |
 
+(Since Kubernetes 1.37, the `MemoryQoS` feature can protect memory requests with `memory.min`, but only if you opt in through the kubelet's `memoryReservationPolicy`. Left at its default, as here, it writes nothing.)
+
 > **In one line:** `requests.cpu` → `cpu.weight`, `limits.cpu` → `cpu.max`, `limits.memory` → `memory.max`. The memory request is for scheduling and eviction.
 
 Check your work: `make check LAB=10`

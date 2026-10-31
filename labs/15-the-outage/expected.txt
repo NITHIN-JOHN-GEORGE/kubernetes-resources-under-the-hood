@@ -10,35 +10,32 @@ kubectl apply -f labs/15-the-outage/load.yaml
 pod/load created
 sleep 90
 kubectl logs load --tail=5
-burst of 12: 12 ok, 0 failed, slowest 2805 ms
-burst of 12: 12 ok, 0 failed, slowest 5413 ms
-burst of 12: 12 ok, 0 failed, slowest 2495 ms
-burst of 12: 12 ok, 0 failed, slowest 6526 ms
-burst of 12: 9 ok, 3 failed, slowest 1992 ms
+burst of 12: 12 ok, 0 failed, slowest 3082 ms
+burst of 12: 12 ok, 0 failed, slowest 4166 ms
+burst of 12: 12 ok, 0 failed, slowest 4168 ms
+burst of 12: 12 ok, 0 failed, slowest 2975 ms
+burst of 12: 12 ok, 0 failed, slowest 2794 ms
 kubectl get pods -l app=serve
 NAME                     READY   STATUS    RESTARTS      AGE
-serve-5dffd9f84f-8d29h   0/1     Running   3 (1s ago)    94s
-serve-5dffd9f84f-jf5bb   0/1     Running   3 (19s ago)   94s
-serve-5dffd9f84f-m6r74   1/1     Running   2 (10s ago)   94s
-kubectl get events --field-selector reason=Unhealthy -o custom-columns=POD:.involvedObject.name,MESSAGE:.message | tail -6
-serve-66d56f84f4-9mv6g   Readiness probe failed: Get "http://10.244.1.2:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-serve-66d56f84f4-9mv6g   Liveness probe failed: Get "http://10.244.1.2:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-serve-66d56f84f4-l8786   Liveness probe failed: Get "http://10.244.1.4:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-serve-66d56f84f4-l8786   Readiness probe failed: Get "http://10.244.1.4:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-serve-66d56f84f4-pf72z   Liveness probe failed: Get "http://10.244.1.3:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
-serve-66d56f84f4-pf72z   Readiness probe failed: Get "http://10.244.1.3:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-2hwsz   1/1     Running   3 (46s ago)   95s
+serve-7685fb4957-4mgjn   1/1     Running   3 (40s ago)   95s
+serve-7685fb4957-xd6vw   1/1     Running   2 (31s ago)   95s
+kubectl get events --field-selector reason=Unhealthy --sort-by=.lastTimestamp -o custom-columns=POD:.involvedObject.name,MESSAGE:.message | tail -6
+serve-7685fb4957-4mgjn   Readiness probe failed: Get "http://10.244.1.25:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-2hwsz   Liveness probe failed: Get "http://10.244.1.26:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-4mgjn   Liveness probe failed: Get "http://10.244.1.25:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-xd6vw   Liveness probe failed: Get "http://10.244.1.24:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-xd6vw   Readiness probe failed: Get "http://10.244.1.24:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+serve-7685fb4957-2hwsz   Readiness probe failed: Get "http://10.244.1.26:8080/healthz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
 P=$(kubectl get pod -l app=serve -o jsonpath='{.items[0].metadata.name}')
 kubectl get pod -l app=serve -o jsonpath='{.items[0].metadata.name}'
-kubectl exec $P -- cat /sys/fs/cgroup/cpu.stat
-usage_usec 197632
-user_usec 154711
-system_usec 42920
-nice_usec 0
-nr_periods 5
-nr_throttled 3
-throttled_usec 109542
-nr_bursts 0
-burst_usec 0
+D=$(./scripts/pod-cgroup.sh $P)
+./scripts/pod-cgroup.sh $P
+docker exec under-the-hood-worker sh -c "a=\$(awk '/^usage_usec/{print \$2}' $D/cpu.stat); sleep 10; b=\$(awk '/^usage_usec/{print \$2}' $D/cpu.stat); echo average CPU over 10 s: \$(( (b - a) / 10000 ))m, request 500m"
+average CPU over 10 s: 384m, request 500m
+docker exec under-the-hood-worker grep -E 'nr_periods|nr_throttled' "$D/cpu.stat"
+nr_periods 843
+nr_throttled 790
 kubectl set resources deployment/serve --limits=cpu=2,memory=128Mi
 deployment.apps/serve resource requirements updated
 kubectl rollout status deployment/serve --timeout=120s
@@ -46,28 +43,26 @@ Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have b
 Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "serve" rollout to finish: 1 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
 Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
-Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
-Waiting for deployment "serve" rollout to finish: 2 out of 3 new replicas have been updated...
-Waiting for deployment "serve" rollout to finish: 1 old replicas are pending termination...
-Waiting for deployment "serve" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "serve" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "serve" rollout to finish: 1 old replicas are pending termination...
 Waiting for deployment "serve" rollout to finish: 1 old replicas are pending termination...
 deployment "serve" successfully rolled out
 sleep 60
 kubectl get pods -l app=serve
-NAME                     READY   STATUS    RESTARTS   AGE
-serve-68b76dd6f6-7xx6s   1/1     Running   0          68s
-serve-68b76dd6f6-qvklq   1/1     Running   0          72s
-serve-68b76dd6f6-xph96   1/1     Running   0          64s
+NAME                    READY   STATUS    RESTARTS   AGE
+serve-6948c745b-7hdxp   1/1     Running   0          72s
+serve-6948c745b-fvhql   1/1     Running   0          68s
+serve-6948c745b-mw65x   1/1     Running   0          64s
 kubectl logs load --tail=3
-burst of 12: 12 ok, 0 failed, slowest 662 ms
-burst of 12: 12 ok, 0 failed, slowest 499 ms
-burst of 12: 12 ok, 0 failed, slowest 659 ms
+burst of 12: 12 ok, 0 failed, slowest 570 ms
+burst of 12: 12 ok, 0 failed, slowest 367 ms
+burst of 12: 12 ok, 0 failed, slowest 584 ms
 PASS readiness probes timed out under load (3 times): pods dropped out of the Service
 PASS liveness probes timed out under load (3 times)
-PASS with a 2 CPU limit, serve-68b76dd6f6-7xx6s hasn't restarted
+PASS with a 2 CPU limit, serve-6948c745b-7hdxp hasn't restarted

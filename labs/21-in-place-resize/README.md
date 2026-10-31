@@ -44,7 +44,7 @@ restarts=0
 
 ## What happened
 
-The kubelet asked the runtime to rewrite the files of the live container: `cpu.max` from 20000 to 50000, `memory.max` from 64 MiB to 128 MiB, with no restart. In-place resize is on by default since Kubernetes 1.33.
+The kubelet asked the runtime to rewrite the files of the live container: `cpu.max` from 20000 to 50000, `memory.max` from 64 MiB to 128 MiB, with no restart. In-place resize has been on by default since Kubernetes 1.33 and stable since 1.35.
 
 > **In one line:** resize rewrites the cgroup files of a live container. No restart, because there's nothing to restart: it's just a file.
 

@@ -58,9 +58,7 @@ Every file in these labs already has a metric. cAdvisor, built into the kubelet,
 | `memory.stat` → `anon` / `file` | `container_memory_rss` / `container_memory_cache` |
 | `memory.events` → `oom_kill` | `container_oom_events_total` |
 
-When a pod is slow but its CPU and memory graphs look fine, check pressure. Rising `memory.pressure` is often the earliest warning before an OOM kill.
-
-(A ready-made Prometheus and Grafana add-on for this lab is coming in the next version of the lab.)
+Since Kubernetes 1.36 the kubelet also exports pressure as stable metrics, for nodes, pods and containers. When a pod is slow but its CPU and memory graphs look fine, check pressure. Rising `memory.pressure` is often the earliest warning before an OOM kill.
 
 > **In one line:** every cgroup file has a metric. Watch the throttle ratio, the working set and OOM events, and use pressure when graphs look fine but users don't.
 

@@ -14,7 +14,7 @@ spec:
     metadata:
       labels: {app: serve}
       annotations:
-        what: "A web service: 4 request threads, 200 ms of CPU per request fanned out to 4 workers, 500m CPU limit."
+        what: "A web service: 4 request threads, 200 ms of CPU per request fanned out to 4 workers, 500m CPU request and limit."
     spec:
       terminationGracePeriodSeconds: 1
       containers:
@@ -24,7 +24,7 @@ spec:
           ports:
             - containerPort: 8080
           resources:
-            requests: {cpu: 250m, memory: 64Mi}
+            requests: {cpu: 500m, memory: 64Mi}
             limits:   {cpu: 500m, memory: 128Mi}
           # Probes every 3 s while bursts come every 2 s, so probes land at every point of the
           # burst cycle (with a 2 s period they'd always hit the same quiet moment).

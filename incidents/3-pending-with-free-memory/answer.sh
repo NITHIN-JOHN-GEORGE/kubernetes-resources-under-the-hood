@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Check an answer for incident 4 and explain what was going on, one step at a time.
+# Check an answer for incident 3 and explain what was going on, one step at a time.
 source "$(dirname "$0")/../../lib/common.sh"
 guess="$(echo "${1:-}" | tr 'A-Z' 'a-z')"
 case "$guess" in
   *request*|*reserv*|*allocat*|*promis*) pass "Correct: the idle pods' memory requests." ;;
-  "") echo "Usage: make answer-4 CAUSE=<your answer>   (or CAUSE=show to see the answer)"; exit 1 ;;
+  "") echo "Usage: make answer-3 CAUSE=<your answer>   (or CAUSE=show to see the answer)"; exit 1 ;;
   show) note "Here's the answer." ;;
-  *) fail "Not quite. Try: make hint-4"; exit 1 ;;
+  *) fail "Not quite. Try: make hint-3"; exit 1 ;;
 esac
-kubectl -n "$NS" get pod new-feature >/dev/null 2>&1 || { echo "new-feature isn't there. Start it with: make incident-4"; exit 1; }
+kubectl -n "$NS" get pod new-feature >/dev/null 2>&1 || { echo "new-feature isn't there. Start it with: make incident-3"; exit 1; }
 
 stage "1. The evidence"
 note "  What the scheduler said about new-feature:"

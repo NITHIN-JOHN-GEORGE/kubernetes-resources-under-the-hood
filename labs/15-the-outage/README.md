@@ -18,7 +18,7 @@ No. Each burst lands at once, and with a 500m limit the pods spend their budget 
 
 ## Steps
 
-The service: 3 replicas, 4 request threads each, 200 ms of CPU per request fanned out to 4 workers, a **500m CPU limit**, and liveness and readiness probes every 3 seconds with a 1 second timeout (open `deployment.yaml` to see them):
+The service: 3 replicas, 4 request threads each, 200 ms of CPU per request fanned out to 4 workers, a **500m CPU request and limit**, and liveness and readiness probes every 3 seconds with a 1 second timeout (open `deployment.yaml` to see them):
 
 ```bash
 kubectl apply -f labs/15-the-outage/deployment.yaml -f labs/15-the-outage/service.yaml
@@ -52,14 +52,32 @@ kubectl get events --field-selector reason=Unhealthy --sort-by=.lastTimestamp -o
 
 `Liveness probe failed` and `Readiness probe failed`, with `context deadline exceeded`: the probe got no answer within 1 second.
 
-Now look at what the kernel recorded. We read the **pod's** `cpu.stat` from the node, because a container's counters start again from zero every time it restarts:
+**What the dashboard shows.** Measure one pod's average CPU over 10 seconds, the way a CPU graph would. The whole measurement runs on the node, so the timing is exact:
 
 ```bash
 P=$(kubectl get pod -l app=serve -o jsonpath='{.items[0].metadata.name}')
-docker exec under-the-hood-worker grep -E 'nr_periods|nr_throttled' "$(./scripts/pod-cgroup.sh $P)/cpu.stat"
+D=$(./scripts/pod-cgroup.sh $P)
+docker exec under-the-hood-worker sh -c "a=\$(awk '/^usage_usec/{print \$2}' $D/cpu.stat); sleep 10; b=\$(awk '/^usage_usec/{print \$2}' $D/cpu.stat); echo average CPU over 10 s: \$(( (b - a) / 10000 ))m, request 500m"
 ```
 
-`nr_throttled` is most of `nr_periods`: in an earlier run I measured 729 throttled out of 773. (`./scripts/watch.sh $P` shows it live.)
+```text
+average CPU over 10 s: 384m, request 500m
+```
+
+77% of its request on my run: on a dashboard comparing usage with requests, nothing looks wrong. That's the trap from the blog's intro, where the service sat below 80% of its request.
+
+**What the kernel recorded.** We read the **pod's** `cpu.stat` from the node, because a container's counters start again from zero every time it restarts:
+
+```bash
+docker exec under-the-hood-worker grep -E 'nr_periods|nr_throttled' "$D/cpu.stat"
+```
+
+```text
+nr_periods 843
+nr_throttled 790
+```
+
+Throttled in 790 of 843 periods, 94%, while the average said 77% of the request. (`./scripts/watch.sh $P` shows it live.)
 
 **The fix the team used: a bigger limit.** Raise it from 500m to 2 CPUs and watch the restarts stop. On my run, after the change: 0 restarts, and the slowest request in a burst dropped to about 0.5 seconds.
 
@@ -78,7 +96,7 @@ kubectl logs load --tail=3
 3. **The probe waits too.** `/healthz` needs almost no CPU, but it waits for a free request thread, inside the same throttled cgroup.
 4. **Readiness** failures pull the pod out of the Service, so the others get bigger bursts. **Liveness** failures restart the container, and a restart drops everything in flight.
 
-Averaged over a minute, the pods' CPU sits below their 500m limit, so a usage graph looks busy but not maxed out. The throttle ratio, `nr_throttled / nr_periods`, is what gives it away: most periods end with the budget used up.
+Averaged over time, each pod uses less CPU than it requested, so a dashboard comparing usage with requests says everything is fine. The throttle ratio, `nr_throttled / nr_periods`, is what gives it away: most periods end with the budget used up.
 
 > **In one line:** throttling hides behind averages, freezes your probes along with everything else, and comes from bursts, not average usage.
 

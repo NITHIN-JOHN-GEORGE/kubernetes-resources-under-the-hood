@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Check an answer for incident 3 and explain what was going on, one step at a time.
+# Check an answer for incident 2 and explain what was going on, one step at a time.
 source "$(dirname "$0")/../../lib/common.sh"
 guess="$(echo "${1:-}" | tr 'A-Z' 'a-z')"
 case "$guess" in
   *spike*|*peak*|*burst*|*report*|*short*) pass "Correct: a short memory spike, between dashboard samples." ;;
-  "") echo "Usage: make answer-3 CAUSE=<your answer>   (or CAUSE=show to see the answer)"; exit 1 ;;
+  "") echo "Usage: make answer-2 CAUSE=<your answer>   (or CAUSE=show to see the answer)"; exit 1 ;;
   show) note "Here's the answer." ;;
-  *) fail "Not quite. Try: make hint-3"; exit 1 ;;
+  *) fail "Not quite. Try: make hint-2"; exit 1 ;;
 esac
-kubectl -n "$NS" get pod report-worker >/dev/null 2>&1 || { echo "report-worker isn't running. Start it with: make incident-3"; exit 1; }
+kubectl -n "$NS" get pod report-worker >/dev/null 2>&1 || { echo "report-worker isn't running. Start it with: make incident-2"; exit 1; }
 pdir="$(pod_cgroup_dir report-worker)"
 
 stage "1. The evidence"
