@@ -4,7 +4,7 @@
 
 ### From YAML to cgroups
 
-The hands-on lab for **[Cgroups: A Deep Dive into Resource Management in Kubernetes](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/)**. One lab per chapter, run on your own laptop, reading the real kernel files.
+The hands-on lab for **Cgroups: A Deep Dive into Resource Management in Kubernetes**, a three-part series: [Part 1: Foundations](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/) (labs 01–11), [Part 2: CPU](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-2/) (labs 12–15) and [Part 3: Memory](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-3/) (labs 16–21). One lab per chapter, run on your own laptop, reading the real kernel files.
 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-kind-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![cgroups v2](https://img.shields.io/badge/cgroups-v2-38E8C6?style=flat-square&logo=linux&logoColor=black)
@@ -192,7 +192,7 @@ Then run `make check-setup`. Every ✗ comes with the fix.
 
 ## Further reading
 
-- [The blog post](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/), which this lab follows chapter by chapter
+- The blog series, which this lab follows chapter by chapter: [Part 1](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/), [Part 2](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-2/), [Part 3](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-3/)
 - [Linux kernel docs: Control Group v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
 - [Kubernetes docs: Resource management for pods and containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 

@@ -49,7 +49,7 @@ sleep 5
 docker exec under-the-hood-worker grep -E 'usage_usec|nr_throttled' /sys/fs/cgroup/lab-cpu/cpu.stat
 ```
 
-`usage_usec` grows by about 1,000,000 (one second of CPU in five seconds: 20%), and `nr_throttled` by about 50. On my machine: **203m of CPU and 51 throttled periods in 5 seconds**.
+`usage_usec` grows by about 1,000,000 (one second of CPU in five seconds: 20%), and `nr_throttled` by about 50. On my machine: **200m of CPU and 51 throttled periods in 5 seconds**.
 
 **5. Change the dial while it runs.** No restart, no API call:
 
@@ -59,7 +59,7 @@ sleep 5
 docker exec under-the-hood-worker grep usage_usec /sys/fs/cgroup/lab-cpu/cpu.stat
 ```
 
-Usage now climbs by about 2,500,000 every five seconds: half a CPU (I measured 512m).
+Usage now climbs by about 2,500,000 every five seconds: half a CPU (I measured 513m).
 
 **6. A memory box.** 50 MiB, no swap, and a shell that keeps doubling a string:
 

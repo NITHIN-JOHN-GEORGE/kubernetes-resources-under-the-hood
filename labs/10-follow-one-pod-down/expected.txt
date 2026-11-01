@@ -4,12 +4,22 @@ kubectl wait --for=condition=Ready pod/follow-me --timeout=120s
 pod/follow-me condition met
 CID=$(kubectl get pod follow-me -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#containerd://##')
 kubectl get pod follow-me -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#containerd://##'
-docker exec under-the-hood-worker crictl inspect $CID | grep -E '"cgroupsPath"|"shares"|"quota"|"period"|"limit"'
-        "cgroupsPath": "kubelet-kubepods-burstable-poda331bd19_f1da_4043_a794_0085ca918236.slice:cri-containerd:182501fd951414c4d73aa670144cc9d2dbc0e0d9615ddd8df8944306f7152fea",
-            "period": 100000,
-            "quota": 50000,
-            "shares": 256
-            "limit": 134217728,
+B=/run/containerd/io.containerd.runtime.v2.task/k8s.io/$CID
+docker exec under-the-hood-worker ls $B
+bootstrap.json
+config.json
+init.pid
+log
+log.json
+options.json
+rootfs
+runtime
+sandbox
+work
+docker exec under-the-hood-worker cat $B/config.json | tr -d ' \n' | grep -oE '"cgroupsPath":"[^"]*"|"(cpu|memory)":\{[^}]*\}'
+"memory":{"limit":134217728,"swap":134217728}
+"cpu":{"shares":256,"quota":50000,"period":100000}
+"cgroupsPath":"kubelet-kubepods-burstable-pod71a15fc8_7e25_4837_be7d_03a883dab286.slice:cri-containerd:a6ced2ee77804e11ef5c8aafbd2be2df845465c7e9aba11e6854530246ffac02"
 docker exec under-the-hood-worker systemctl show cri-containerd-$CID.scope -p CPUWeight -p CPUQuotaPerSecUSec -p MemoryMax
 CPUWeight=35
 CPUQuotaPerSecUSec=500ms
@@ -29,12 +39,17 @@ HPID=$(docker exec under-the-hood-worker head -n1 $CDIR/cgroup.procs)
 docker exec under-the-hood-worker head -n1 $CDIR/cgroup.procs
 docker exec under-the-hood-worker cat /proc/$HPID/comm /proc/$HPID/cgroup
 sleep
-0::/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-poda331bd19_f1da_4043_a794_0085ca918236.slice/cri-containerd-182501fd951414c4d73aa670144cc9d2dbc0e0d9615ddd8df8944306f7152fea.scope
+0::/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod71a15fc8_7e25_4837_be7d_03a883dab286.slice/cri-containerd-a6ced2ee77804e11ef5c8aafbd2be2df845465c7e9aba11e6854530246ffac02.scope
 kubectl exec follow-me -- cat /proc/1/comm /proc/self/cgroup
 sleep
 0::/
+PARENT=$(docker exec under-the-hood-worker awk '{print $4}' /proc/$HPID/stat)
+docker exec under-the-hood-worker awk '{print $4}' /proc/$HPID/stat
+docker exec under-the-hood-worker cat /proc/$PARENT/comm
+containerd-shim
 PASS the runtime spec asks for 256 CPU shares (250m)
 PASS and a quota of 50000 per 100000 (500m)
+PASS config.json, the file runc read, has the same quota
 PASS systemd holds the limit as 500ms per second
 PASS cpu.max is 50000 100000
 PASS memory.max is 134217728

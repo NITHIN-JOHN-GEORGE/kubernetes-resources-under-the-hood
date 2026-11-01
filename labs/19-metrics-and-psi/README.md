@@ -1,6 +1,6 @@
 # 19 · Seeing it in production: metrics and pressure
 
-> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [chapter 19](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes/#19-seeing-it-in-production)
+> **Runs on:** the kind cluster (`make cluster`) · **Time:** 10 minutes · **Blog:** [watching CPU in production](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-2/#watching-cpu-in-production) (Part 2) and [chapter 19](https://nithinjohngeorge.com/blog/cgroups-deep-dive-kubernetes-part-3/#19-seeing-memory-in-production) (Part 3)
 >
 > **You'll learn:** which Prometheus metric comes from which cgroup file, and how pressure (PSI) shows waiting that usage graphs can't.
 

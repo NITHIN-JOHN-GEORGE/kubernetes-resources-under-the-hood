@@ -26,21 +26,15 @@ kubectl wait --for=condition=Ready pod/follow-me --timeout=120s
 CID=$(kubectl get pod follow-me -o jsonpath='{.status.containerStatuses[0].containerID}' | sed 's#containerd://##')
 ```
 
-**Layer 1, the runtime.** The kubelet hands containerd an OCI runtime spec. `crictl` shows what it asked for:
+**Layer 1, the runtime's JSON file.** The kubelet doesn't write cgroup files. It sends your numbers to containerd over the CRI (Container Runtime Interface). containerd writes them into one JSON file, `config.json`, in the format set by the Open Container Initiative (the **OCI runtime spec**). runc, the low-level runtime, reads that file, creates the cgroup, writes the numbers in and starts your process.
 
 ```bash
-docker exec under-the-hood-worker crictl inspect $CID | grep -E '"cgroupsPath"|"shares"|"quota"|"period"|"limit"'
+B=/run/containerd/io.containerd.runtime.v2.task/k8s.io/$CID
+docker exec under-the-hood-worker ls $B
+docker exec under-the-hood-worker cat $B/config.json | tr -d ' \n' | grep -oE '"cgroupsPath":"[^"]*"|"(cpu|memory)":\{[^}]*\}'
 ```
 
-```text
-"cgroupsPath": "kubelet-kubepods-burstable-pod97ea3d5e_c357_….slice:cri-containerd:…",
-"period": 100000,
-"quota": 50000,
-"shares": 256
-"limit": 134217728,
-```
-
-`shares: 256` is the 250m request in the old cgroup v1 unit (250 × 1024 / 1000).
+`shares: 256` is the 250m request in the old cgroup v1 unit (250 × 1024 / 1000). `crictl inspect $CID` shows the same spec.
 
 **Layer 2, systemd.** runc asks systemd to create the cgroup as a *scope*:
 
@@ -78,6 +72,8 @@ kubectl exec follow-me -- cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max /
 HPID=$(docker exec under-the-hood-worker head -n1 $CDIR/cgroup.procs)
 docker exec under-the-hood-worker cat /proc/$HPID/comm /proc/$HPID/cgroup
 kubectl exec follow-me -- cat /proc/1/comm /proc/self/cgroup
+PARENT=$(docker exec under-the-hood-worker awk '{print $4}' /proc/$HPID/stat)
+docker exec under-the-hood-worker cat /proc/$PARENT/comm
 ```
 
 The same `sleep`: an ordinary PID and a long cgroup path on the node; PID 1 and `0::/` inside (lab 07).

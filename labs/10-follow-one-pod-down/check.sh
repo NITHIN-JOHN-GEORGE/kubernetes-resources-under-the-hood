@@ -5,6 +5,7 @@ cid=$(kubectl -n "$NS" get pod follow-me -o jsonpath='{.status.containerStatuses
 spec=$(on_node "crictl inspect $cid" 2>/dev/null)
 echo "$spec" | grep -q '"shares": 256' && pass "the runtime spec asks for 256 CPU shares (250m)" || fail "expected shares 256 in crictl inspect"
 echo "$spec" | grep -q '"quota": 50000' && pass "and a quota of 50000 per 100000 (500m)" || fail "expected quota 50000"
+on_node "cat /run/containerd/io.containerd.runtime.v2.task/k8s.io/$cid/config.json" 2>/dev/null | tr -d ' \n' | grep -q '"quota":50000' && pass "config.json, the file runc read, has the same quota" || fail "expected quota 50000 in the container's config.json"
 [ "$(on_node "systemctl show cri-containerd-$cid.scope -p CPUQuotaPerSecUSec --value")" = 500ms ] && pass "systemd holds the limit as 500ms per second" || fail "expected CPUQuotaPerSecUSec=500ms"
 [ "$(cg follow-me cpu.max)" = "50000 100000" ] && pass "cpu.max is 50000 100000" || fail "cpu.max should be 50000 100000"
 [ "$(cg follow-me memory.max)" = 134217728 ] && pass "memory.max is 134217728" || fail "memory.max should be 134217728"
