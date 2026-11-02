@@ -1,0 +1,89 @@
+# Incident 4: a latency-sensitive controller shares the node with three batch jobs.
+# The batch jobs have tiny requests and CPU limits above the size of the node.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: controller
+  labels: {incident: "4"}
+  annotations:
+    what: "A pretend controller. Every second it handles one request by splitting the work across 4 worker processes, about 40 ms of CPU each."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: python:3.12-alpine
+      command: ["python", "-u", "-c"]
+      args:
+        - |
+          import multiprocessing as mp, time
+          def work(_):                      # about 40 ms of real CPU work
+              t = time.process_time()
+              while time.process_time() - t < 0.04:
+                  pass
+          if __name__ == "__main__":
+              pool = mp.Pool(4)
+              n = 0
+              while True:
+                  n += 1
+                  start = time.time()
+                  pool.map(work, range(4))  # one request = 4 pieces of work in parallel
+                  print(f"request {n}: {(time.time() - start) * 1000:.0f} ms   (target: under 100 ms)", flush=True)
+                  time.sleep(1)
+      resources:
+        requests: {cpu: 100m, memory: 128Mi}
+        limits:   {cpu: "2", memory: 256Mi}   # 200 ms per 100 ms period: more than one request ever needs
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: batch-1
+  labels: {incident: "4"}
+  annotations:
+    what: "A pretend batch job: twice as many busy threads as the node has CPUs. Tiny request, CPU limit bigger than the node."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sh", "-c", "exec burn --threads $(( $(nproc) * 2 ))"]
+      resources:
+        requests: {cpu: 100m, memory: 32Mi}
+        limits:   {cpu: "64", memory: 64Mi}   # far above the node's CPUs: the same as no limit
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: batch-2
+  labels: {incident: "4"}
+  annotations:
+    what: "A pretend batch job: twice as many busy threads as the node has CPUs. Tiny request, CPU limit bigger than the node."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sh", "-c", "exec burn --threads $(( $(nproc) * 2 ))"]
+      resources:
+        requests: {cpu: 100m, memory: 32Mi}
+        limits:   {cpu: "64", memory: 64Mi}   # far above the node's CPUs: the same as no limit
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: batch-3
+  labels: {incident: "4"}
+  annotations:
+    what: "A pretend batch job: twice as many busy threads as the node has CPUs. Tiny request, CPU limit bigger than the node."
+spec:
+  nodeSelector: {kubernetes.io/hostname: under-the-hood-worker}
+  terminationGracePeriodSeconds: 1
+  containers:
+    - name: main
+      image: lab-tools:1.0
+      args: ["sh", "-c", "exec burn --threads $(( $(nproc) * 2 ))"]
+      resources:
+        requests: {cpu: 100m, memory: 32Mi}
+        limits:   {cpu: "64", memory: 64Mi}   # far above the node's CPUs: the same as no limit

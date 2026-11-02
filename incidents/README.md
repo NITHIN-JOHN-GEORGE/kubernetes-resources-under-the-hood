@@ -7,8 +7,9 @@ The labs show you each mechanism. These incidents give you a broken situation an
 | [1](1-slow-checkout/) | "Checkout is slow, but the CPU graph is under its limit" | 14, 15 |
 | [2](2-oom-at-half/) | "OOMKilled, but the dashboard never went above half" | 16, 17 |
 | [3](3-pending-with-free-memory/) | "Pending for ages, the node's memory is almost empty" | 09, 18 |
+| [4](4-waiting-without-throttling/) | "The controller waits for CPU, but it's never throttled" | 13, 14, 19 |
 
-(Two more are planned: "the restart loop" and "Go on a big node".)
+(More are planned: "the restart loop" and "Go on a big node".)
 
 ## How to play
 

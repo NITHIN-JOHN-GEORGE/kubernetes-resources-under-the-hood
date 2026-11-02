@@ -125,6 +125,7 @@ Once you've done the labs, try the [**incidents**](incidents/): something is bro
 | 1 | "Checkout is slow, but the CPU graph is under its limit" |
 | 2 | "OOMKilled, but the dashboard never went above half" |
 | 3 | "Pending for ages, the node's memory is almost empty" |
+| 4 | "The controller waits for CPU, but it's never throttled" |
 
 ```bash
 make incident-1                  # start it and read the ticket
