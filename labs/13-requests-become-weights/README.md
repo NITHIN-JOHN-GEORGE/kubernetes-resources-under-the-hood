@@ -33,23 +33,24 @@ kubectl exec weight-high -- cat /sys/fs/cgroup/cpu.weight
 Those are the **containers'** weights. Now measure the split over 10 seconds:
 
 ```bash
-l1=$(kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
-h1=$(kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
+low_before=$(kubectl exec weight-low -- awk '$1=="usage_usec"{print $2}' /sys/fs/cgroup/cpu.stat)
+high_before=$(kubectl exec weight-high -- awk '$1=="usage_usec"{print $2}' /sys/fs/cgroup/cpu.stat)
 sleep 10
-l2=$(kubectl exec weight-low  -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
-h2=$(kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu.stat)
-echo "weight-low: $(( (l2 - l1) / 10000 ))m   weight-high: $(( (h2 - h1) / 10000 ))m"
+low_after=$(kubectl exec weight-low -- awk '$1=="usage_usec"{print $2}' /sys/fs/cgroup/cpu.stat)
+high_after=$(kubectl exec weight-high -- awk '$1=="usage_usec"{print $2}' /sys/fs/cgroup/cpu.stat)
+echo "weight-low:  $(( (low_after - low_before) / 10000 ))m"
+echo "weight-high: $(( (high_after - high_before) / 10000 ))m"
 ```
 
 On my 10-CPU setup: **1060m vs 9103m, 8.6×**. That's close to 800 ÷ 100, but far from 84 ÷ 17 ≈ 4.9. Why? Each pod has one busy container, so the competition happens one level up, between the **pod** cgroups. Read their weights:
 
 ```bash
-for p in weight-low weight-high; do echo "$p pod cgroup: $(docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $p)/cpu.weight)"; done
+for pod in weight-low weight-high; do echo "$pod: $(docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $pod)/cpu.weight)"; done
 ```
 
 ```text
-weight-low pod cgroup: 4
-weight-high pod cgroup: 32
+weight-low: 4
+weight-high: 32
 ```
 
 32 ÷ 4 = 8.
