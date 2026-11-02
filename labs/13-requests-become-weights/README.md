@@ -41,7 +41,7 @@ h2=$(kubectl exec weight-high -- awk '/usage_usec/{print $2}' /sys/fs/cgroup/cpu
 echo "weight-low: $(( (l2 - l1) / 10000 ))m   weight-high: $(( (h2 - h1) / 10000 ))m"
 ```
 
-On my 10-CPU setup: **1013m vs 8966m, 8.8×**. That's close to 800 ÷ 100, but far from 84 ÷ 17 ≈ 4.9. Why? Each pod has one busy container, so the competition happens one level up, between the **pod** cgroups. Read their weights:
+On my 10-CPU setup: **1060m vs 9103m, 8.6×**. That's close to 800 ÷ 100, but far from 84 ÷ 17 ≈ 4.9. Why? Each pod has one busy container, so the competition happens one level up, between the **pod** cgroups. Read their weights:
 
 ```bash
 for p in weight-low weight-high; do echo "$p pod cgroup: $(docker exec under-the-hood-worker cat $(./scripts/pod-cgroup.sh $p)/cpu.weight)"; done
